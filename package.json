@@ -1,0 +1,23 @@
+{
+  "name": "dom-quake",
+  "version": "1.0.0",
+  "author": "Thassilo M. Schiepanski",
+  "type": "module",
+  "main": "./dist/api.js",
+  "scripts": {
+    "build": "npx esbuild ./src/api.ts --bundle --outfile=./dist/api.js",
+    "build:watch": "npm run build:api -- --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webfuse-com/dom-seismograph.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webfuse-com/dom-seismograph/issues"
+  },
+  "homepage": "https://github.com/webfuse-com/dom-seismograph#readme",
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}
