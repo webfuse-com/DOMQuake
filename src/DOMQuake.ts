@@ -1,7 +1,15 @@
+import { EventEmitter } from "./EventEmitter.js";
+
+
 interface DOMQuakeOptions {
     windowMs: number;
     threshold: number;
     quiescenceMs: number;
+}
+
+interface MutationEvent {
+    timestamp: number;
+    weight: number;
 }
 
 
@@ -25,7 +33,8 @@ const WEIGHTS = {
 };
 
 
-export class DOMQuake {
+export class DOMQuake extends EventEmitter {
+    private readonly mutationEvents: MutationEvent[] = [];
     private readonly root: Element;
     private readonly options: {
         windowMs: number;
@@ -34,6 +43,8 @@ export class DOMQuake {
     };
 
     constructor(root: Element = document.documentElement, options: Partial<DOMQuakeOptions> = {}) {
+        super();
+
         const optionsWithDefaults: DOMQuakeOptions = {
             ...DEFAULT_OPTIONS,
             ...options
@@ -47,8 +58,9 @@ export class DOMQuake {
         let depth: number = 0;
         let current: Node = node;
 
-        while (current.parentNode && depth < WEIGHTS.maxDepth) {
+        while(current.parentNode && depth < WEIGHTS.maxDepth) {
             current = current.parentNode;
+
             depth++;
         }
 
@@ -60,30 +72,26 @@ export class DOMQuake {
     }
 
     private computeHTMLDeltaFactor(record: MutationRecord, depth: number): number {
-        const shouldSample: boolean = depth <= WEIGHTS.htmlDelta.maxDepthForSampling;
+        if(depth > WEIGHTS.htmlDelta.maxDepthForSampling) {
+            const nodeCount: number = record.addedNodes.length + record.removedNodes.length;
 
-        if (shouldSample) {
-            const affectedNodes: Node[] = [
-                ...Array.from(record.addedNodes),
-                ...Array.from(record.removedNodes),
-            ];
-
-            const totalHtmlDelta: number = affectedNodes.reduce(
-                (sum: number, node: Node) => {
-                    const html: string = (node as Element).outerHTML ?? node.textContent ?? "";
-                    const htmlSize: number = Math.min(html.length, WEIGHTS.htmlDelta.maxHtmlLength);
-
-                    return sum + htmlSize;
-                },
-                0
-            );
-
-            return Math.log2(totalHtmlDelta + 1) + 1;
+            return Math.log2(nodeCount + 1) + 1;
         }
 
-        const nodeCount: number = record.addedNodes.length + record.removedNodes.length;
+        const affectedNodes: Node[] = [
+            ...Array.from(record.addedNodes),
+            ...Array.from(record.removedNodes)
+        ];
 
-        return Math.log2(nodeCount + 1) + 1;
+        const totalHtmlDelta: number = affectedNodes
+            .reduce((sum: number, node: Node) => {
+                const html: string = (node as Element).outerHTML ?? node.textContent ?? "";
+                const htmlSize: number = Math.min(html.length, WEIGHTS.htmlDelta.maxHtmlLength);
+
+                return sum + htmlSize;
+            }, 0);
+
+        return Math.log2(totalHtmlDelta + 1) + 1;
     }
 
     private weight(record: MutationRecord): number {
@@ -94,5 +102,16 @@ export class DOMQuake {
         const typeFactor: number = WEIGHTS.typeFactors[record.type] ?? 0.1;
 
         return computeDepthFactor * sizeFactor * typeFactor;
+    }
+
+    private computeWindowSum(tNow: number): number {
+        const cutoff: number = tNow - this.options.windowMs;
+
+        while(this.mutationEvents.length > 0 && this.mutationEvents[0].timestamp < cutoff) {
+            this.mutationEvents.shift();
+        }
+
+        return this.mutationEvents
+            .reduce((sum: number, event: MutationEvent) => sum + event.weight, 0);
     }
 }

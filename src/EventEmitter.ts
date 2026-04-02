@@ -21,14 +21,18 @@ export class EventEmitter {
         return listenerMap.get(event)!;
     }
 
-    public on(event: Event, listener: ListenerCb) {
+    public on(event: Event, listener: ListenerCb): this {
         this.getListeners(this.listeners.on, event)
             .push(listener);
+
+        return this;
     }
 
-    public once(event: Event, listener: ListenerCb) {
+    public once(event: Event, listener: ListenerCb): this {
         this.getListeners(this.listeners.once, event)
             .push(listener);
+
+        return this;
     }
 
     public emit(event: Event, ...args: unknown[]) {
