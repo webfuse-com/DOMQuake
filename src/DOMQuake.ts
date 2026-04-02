@@ -4,6 +4,7 @@ import { Event, EventEmitter } from "./EventEmitter.js";
 interface DOMQuakeOptions {
     minTransitionDurationMs: number;
     threshold: number;
+    tickIntervalMs: number;
     windowMs: number;
 }
 
@@ -17,33 +18,40 @@ interface IntensityEventArgument {
 }
 
 
-const DEFAULT_OPTIONS: DOMQuakeOptions = {
-    minTransitionDurationMs: 200,
-    threshold: 2.0,
-    windowMs: 300
-};
-
-const WEIGHTS = {
+const WEIGHTS: {
+    htmlDelta: Record<string, number>
+    maxDepth: number;
+    typeFactors: Record<string, number>;
+} = {
+    htmlDelta: {
+        maxDepthForSampling: 4,
+        maxHtmlLength: 50000
+    },
+    maxDepth: 8,
     typeFactors: {
         childList: 1.0,
         attributes: 0.4,
-        characterData: 0.1,
-    },
-    maxDepth: 8,
-    htmlDelta: {
-        maxDepthForSampling: 4,
-        maxHtmlLength: 50_000,
-    },
+        characterData: 0.1
+    }
+};
+
+const DEFAULT_OPTIONS: DOMQuakeOptions = {
+    minTransitionDurationMs: 200,
+    threshold: 2.0,
+    tickIntervalMs: 50,
+    windowMs: 300
 };
 
 
 export class DOMQuake extends EventEmitter {
-    private readonly mutationEvents: MutationEvent[] = [];
     private readonly root: Element;
     private readonly options: DOMQuakeOptions;
 
+    private mutationEvents: MutationEvent[] = [];
     private currentState: Event = "idle";
-    private transitionStartMs: number | null = null;
+    private transitionStartTimestamp: number | null = null;
+    private mutationObserver: MutationObserver | null = null;
+    private tickInterval: number | null = null;
 
     constructor(root: Element = document.documentElement, options: Partial<DOMQuakeOptions> = {}) {
         super();
@@ -97,14 +105,14 @@ export class DOMQuake extends EventEmitter {
         return Math.log2(totalHtmlDelta + 1) + 1;
     }
 
-    private weight(record: MutationRecord): number {
+    private computeWeight(record: MutationRecord): number {
         const depth: number = this.measureNodeDepth(record.target);
 
-        const computeDepthFactor: number = this.computeDepthFactor(depth);
+        const depthFactor: number = this.computeDepthFactor(depth);
         const sizeFactor: number = this.computeHTMLDeltaFactor(record, depth);
         const typeFactor: number = WEIGHTS.typeFactors[record.type] ?? 0.1;
 
-        return computeDepthFactor * sizeFactor * typeFactor;
+        return depthFactor * sizeFactor * typeFactor;
     }
 
     private computeWindowSum(tNow: number): number {
@@ -126,19 +134,58 @@ export class DOMQuake extends EventEmitter {
             if(this.currentState !== "idle") return;
 
             this.currentState = "transition";
-            this.transitionStartMs = now;
+            this.transitionStartTimestamp = now;
         } else {
             if(this.currentState !== "transition") return;
 
-            const elapsedMs: number = now - (this.transitionStartMs ?? now);
+            const elapsedMs: number = now - (this.transitionStartTimestamp ?? now);
             if(elapsedMs < this.options.minTransitionDurationMs) return;
 
             this.currentState = "idle";
-            this.transitionStartMs = null;
+            this.transitionStartTimestamp = null;
         }
 
         this.emit<IntensityEventArgument>(this.currentState, {
             intensity
         });
+    }
+
+    public observe(): this {
+        this.mutationObserver = new MutationObserver((records: MutationRecord[]) => {
+            const now: number = performance.now();
+
+            for(const record of records) {
+                this.mutationEvents.push({
+                    timestamp: now,
+                    weight: this.computeWeight(record)
+                });
+            }
+        });
+
+        this.mutationObserver
+            .observe(this.root, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true
+            });
+
+        this.tickInterval = setInterval(() => this.tick(), this.options.tickIntervalMs);
+
+        return this;
+    }
+
+    public disconnect(): this {
+        this.mutationObserver?.disconnect();
+
+        clearInterval(this.tickInterval!);
+
+        this.currentState = "idle";
+        this.mutationEvents = [];
+        this.mutationObserver = null;
+        this.tickInterval = null;
+        this.transitionStartTimestamp = null;
+
+        return this;
     }
 }
