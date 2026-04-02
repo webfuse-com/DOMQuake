@@ -11,6 +11,19 @@ const DEFAULT_OPTIONS: DOMQuakeOptions = {
     quiescenceMs: 200,
 };
 
+const WEIGHTS = {
+    typeFactors: {
+        childList: 1.0,
+        attributes: 0.4,
+        characterData: 0.1,
+    },
+    maxDepth: 8,
+    htmlDelta: {
+        maxDepthForSampling: 4,
+        maxHtmlLength: 50_000,
+    },
+};
+
 
 export class DOMQuake {
     private readonly root: Element;
@@ -29,4 +42,6 @@ export class DOMQuake {
         this.root = root;
         this.options = optionsWithDefaults;
     }
+
+    
 }
