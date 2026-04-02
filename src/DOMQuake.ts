@@ -1,10 +1,10 @@
-import { EventEmitter } from "./EventEmitter.js";
+import { Event, EventEmitter } from "./EventEmitter.js";
 
 
 interface DOMQuakeOptions {
-    windowMs: number;
+    minTransitionDurationMs: number;
     threshold: number;
-    quiescenceMs: number;
+    windowMs: number;
 }
 
 interface MutationEvent {
@@ -12,11 +12,15 @@ interface MutationEvent {
     weight: number;
 }
 
+interface IntensityEventArgument {
+    intensity: number;
+}
+
 
 const DEFAULT_OPTIONS: DOMQuakeOptions = {
-    windowMs: 300,
+    minTransitionDurationMs: 200,
     threshold: 2.0,
-    quiescenceMs: 200,
+    windowMs: 300
 };
 
 const WEIGHTS = {
@@ -36,11 +40,10 @@ const WEIGHTS = {
 export class DOMQuake extends EventEmitter {
     private readonly mutationEvents: MutationEvent[] = [];
     private readonly root: Element;
-    private readonly options: {
-        windowMs: number;
-        threshold: number;
-        quiescenceMs: number;
-    };
+    private readonly options: DOMQuakeOptions;
+
+    private currentState: Event = "idle";
+    private transitionStartMs: number | null = null;
 
     constructor(root: Element = document.documentElement, options: Partial<DOMQuakeOptions> = {}) {
         super();
@@ -113,5 +116,29 @@ export class DOMQuake extends EventEmitter {
 
         return this.mutationEvents
             .reduce((sum: number, event: MutationEvent) => sum + event.weight, 0);
+    }
+
+    private tick(): void {
+        const now: number = performance.now();
+        const intensity: number = this.computeWindowSum(now);
+
+        if(intensity >= this.options.threshold) {
+            if(this.currentState !== "idle") return;
+
+            this.currentState = "transition";
+            this.transitionStartMs = now;
+        } else {
+            if(this.currentState !== "transition") return;
+
+            const elapsedMs: number = now - (this.transitionStartMs ?? now);
+            if(elapsedMs < this.options.minTransitionDurationMs) return;
+
+            this.currentState = "idle";
+            this.transitionStartMs = null;
+        }
+
+        this.emit<IntensityEventArgument>(this.currentState, {
+            intensity
+        });
     }
 }

@@ -1,8 +1,9 @@
-type Event =
-    | 'idle'
-    | 'transition';
 type ListenerCb = (...args: unknown[]) => void;
 type ListenerMap = Map<Event, ListenerCb[]>;
+
+export type Event =
+    | 'idle'
+    | 'transition';
 
 
 export class EventEmitter {
@@ -35,11 +36,11 @@ export class EventEmitter {
         return this;
     }
 
-    public emit(event: Event, ...args: unknown[]) {
+    public emit<T>(event: Event, arg: T) {
         this.getListeners(this.listeners.once, event)
-            .forEach((listener: ListenerCb) => listener(...args));
+            .forEach((listener: ListenerCb) => listener(arg));
         this.getListeners(this.listeners.on, event)
-            .forEach((listener: ListenerCb) => listener(...args));
+            .forEach((listener: ListenerCb) => listener(arg));
 
         this.listeners.once.set(event, []);
     }
