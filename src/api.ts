@@ -1,1 +1,11 @@
-export { DOMQuake } from "./DOMQuake.js";
+import { DOMQuake } from "./DOMQuake.js";
+
+
+declare global {
+    interface Window {
+        DOMQuake: typeof DOMQuake;
+    }
+}
+
+
+window.DOMQuake = DOMQuake;

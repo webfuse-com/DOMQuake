@@ -51,7 +51,7 @@ export class DOMQuake extends EventEmitter {
     private currentState: Event = "idle";
     private transitionStartTimestamp: number | null = null;
     private mutationObserver: MutationObserver | null = null;
-    private tickInterval: number | null = null;
+    private tickInterval: ReturnType<typeof setInterval> | null = null;
 
     constructor(root: Element = document.documentElement, options: Partial<DOMQuakeOptions> = {}) {
         super();
@@ -127,18 +127,18 @@ export class DOMQuake extends EventEmitter {
     }
 
     private tick(): void {
-        const now: number = performance.now();
-        const intensity: number = this.computeWindowSum(now);
+        const tNow: number = performance.now();
+        const intensity: number = this.computeWindowSum(tNow);
 
         if(intensity >= this.options.threshold) {
             if(this.currentState !== "idle") return;
 
             this.currentState = "transition";
-            this.transitionStartTimestamp = now;
+            this.transitionStartTimestamp = tNow;
         } else {
             if(this.currentState !== "transition") return;
 
-            const elapsedMs: number = now - (this.transitionStartTimestamp ?? now);
+            const elapsedMs: number = tNow - (this.transitionStartTimestamp ?? tNow);
             if(elapsedMs < this.options.minTransitionDurationMs) return;
 
             this.currentState = "idle";
