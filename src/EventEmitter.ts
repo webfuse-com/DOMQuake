@@ -1,42 +1,41 @@
+import { EventArgument } from "./types.js";
+
+
 type ListenerCb = (...args: unknown[]) => void;
-type ListenerMap = Map<Event, ListenerCb[]>;
-
-export type Event =
-    | 'idle'
-    | 'transition';
+type ListenerMap<T> = Map<T, ListenerCb[]>;
 
 
-export class EventEmitter {
+export class EventEmitter<T> {
     private readonly listeners: {
-        on: ListenerMap;
-        once: ListenerMap;
+        on: ListenerMap<T>;
+        once: ListenerMap<T>;
     } = {
-        on: new Map<Event, ListenerCb[]>(),
-        once: new Map<Event, ListenerCb[]>(),
+        on: new Map<T, ListenerCb[]>(),
+        once: new Map<T, ListenerCb[]>(),
     };
 
-    private getListeners(listenerMap: ListenerMap, event: Event): ListenerCb[] {
+    private getListeners(listenerMap: ListenerMap<T>, event: T): ListenerCb[] {
         !listenerMap.has(event)
             && listenerMap.set(event, []);
 
         return listenerMap.get(event)!;
     }
 
-    public on(event: Event, listener: ListenerCb): this {
+    public on(event: T, listener: ListenerCb): this {
         this.getListeners(this.listeners.on, event)
             .push(listener);
 
         return this;
     }
 
-    public once(event: Event, listener: ListenerCb): this {
+    public once(event: T, listener: ListenerCb): this {
         this.getListeners(this.listeners.once, event)
             .push(listener);
 
         return this;
     }
 
-    public emit<T>(event: Event, arg: T) {
+    public emit<A = EventArgument>(event: T, arg: A) {
         this.getListeners(this.listeners.once, event)
             .forEach((listener: ListenerCb) => listener(arg));
         this.getListeners(this.listeners.on, event)

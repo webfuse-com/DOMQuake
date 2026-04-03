@@ -92,8 +92,8 @@ process.on("exit", code => {
                     });
                     const detectedTimestamp = new Promise(resolve => {
                         new DOMQuake()
-                            .observe()
-                            .on(event, () => resolve(window.performance.now()));
+                            .on(event, () => resolve(window.performance.now()))
+                            .observe();
                     });
 
                     const timeout = new Promise((_, reject) => {
