@@ -7,7 +7,9 @@
   "scripts": {
     "build": "npx esbuild ./src/api.ts --bundle --outfile=./dist/api.js",
     "build:watch": "npm run build:api -- --watch",
-    "test": "node --experimental-strip-types ./test/test.js"
+    "test:unit": "node --experimental-strip-types ./test/unit/test.js",
+    "test:end-to-end": "node ./test/end-to-end/test.js",
+    "test": "npm run test:unit && npm run test:end-to-end"
   },
   "repository": {
     "type": "git",
@@ -18,6 +20,7 @@
   },
   "homepage": "https://github.com/webfuse-com/dom-seismograph#readme",
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "puppeteer": "^24.40.0"
   }
 }
