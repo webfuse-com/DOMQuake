@@ -6,6 +6,13 @@ export class DOMQuake extends UIShiftObserver {
     public observe(): this {
         super.observe();
 
+        window.addEventListener("load", () => this.emit<
+            EventArgument & { native: boolean; }
+        >("idle", {
+            intensity: 1,
+            native: true
+        }));
+
         return this;
     }
 }
