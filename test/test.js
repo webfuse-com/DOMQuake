@@ -64,6 +64,7 @@ process.on("exit", code => {
 
 
 [
+    "EventEmitter",
     "DOMQuake",
 ]
     .forEach(async reference => {
