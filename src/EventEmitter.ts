@@ -1,4 +1,4 @@
-import { EventArgument } from "./types.js";
+import { type EventArgument } from "./types.ts";
 
 
 type ListenerCb = (...args: unknown[]) => void;

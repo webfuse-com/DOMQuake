@@ -1,4 +1,4 @@
-import { EventArgument } from "./types.js";
+import { type EventArgument } from "./types.ts";
 import { UIShiftObserver } from "./UIShiftObserver.js";
 
 

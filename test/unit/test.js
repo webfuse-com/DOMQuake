@@ -64,8 +64,7 @@ process.on("exit", code => {
 
 
 [
-    "EventEmitter",
-    "DOMQuake",
+    "EventEmitter"
 ]
     .forEach(async reference => {
         await import(

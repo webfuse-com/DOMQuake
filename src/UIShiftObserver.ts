@@ -1,4 +1,4 @@
-import { Event } from "./types.js";
+import { type Event } from "./types.ts";
 import { EventEmitter } from "./EventEmitter.js";
 
 
