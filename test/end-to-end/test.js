@@ -90,15 +90,14 @@ for(const reference of [
     },
     {
         test: "app.static.animated.major",
-        expectedEventChain: [ "idle" ],
-        extraWait: 1000,
+        expectedEventChain: [ "idle", "transition", "idle", "transition" ]
     }
 ]) {
     const returnValue = await runBrowser(
         `file://${join(import.meta.dirname, reference.test.replace(/(\.html)?$/i, ".html"))}`,
         async reference => {
             const TEST_CASE_TIMEOUT_MS = 3000;
-            const TEST_TIMESTAMP_EPSILON_MS = 500;
+            const TEST_TIMESTAMP_EPSILON_MS = 75;
 
             const domQuake = new DOMQuake();
 
@@ -151,7 +150,7 @@ for(const reference of [
 
                 if(timestampDelta > TEST_TIMESTAMP_EPSILON_MS) {
                     return {
-                        error: `Significant time delta for '${event}' (${i}): ${Math.round(timestampDelta)}ms`
+                        error: `Significant time delta for '${event}' (${i}): ${Math.ceil(timestampDelta)}ms`
                     };
                 }
             }

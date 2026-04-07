@@ -2,6 +2,12 @@ import { type Event } from "./types.ts";
 import { EventEmitter } from "./EventEmitter.js";
 
 
+type MutationType =
+    | "childList"
+    | "attributes"
+    | "characterData";
+
+
 interface UIShiftObserverOptions {
     minTransitionDurationMs: number;
     threshold: number;
@@ -14,11 +20,13 @@ interface MutationEvent {
     weight: number;
 }
 
-
 const WEIGHTS: {
-    htmlDelta: Record<string, number>
+    htmlDelta: {
+        maxDepthForSampling: number;
+        maxHtmlLength: number
+    };
     maxDepth: number;
-    typeFactors: Record<string, number>;
+    typeFactors: Record<MutationType, number>
 } = {
     htmlDelta: {
         maxDepthForSampling: 4,
@@ -34,7 +42,7 @@ const WEIGHTS: {
 
 const DEFAULT_OPTIONS: UIShiftObserverOptions = {
     minTransitionDurationMs: 200,
-    threshold: 2.0,
+    threshold: 0.5,
     tickIntervalMs: 50,
     windowMs: 300
 };
@@ -44,11 +52,14 @@ export class UIShiftObserver extends EventEmitter<Event> {
     private readonly root: Element;
     private readonly options: UIShiftObserverOptions;
 
-    private mutationEvents: MutationEvent[] = [];
-    private currentState: Event = "idle";
-    private transitionStartTimestamp: number | null = null;
-    private mutationObserver: MutationObserver | null = null;
-    private tickInterval: ReturnType<typeof setInterval> | null = null;
+    private subtreeSizes!: WeakMap<Node, number>; // O(1)
+    private totalNodeCount!: number;
+    private mutationEvents!: MutationEvent[];
+    private maxPageIntensity!: number | null;
+    private currentState!: Event | null;
+    private transitionStartTimestamp!: number | null;
+    private mutationObserver!: MutationObserver | null;
+    private tickInterval!: ReturnType<typeof setInterval> | null;
 
     constructor(root: Element = document.documentElement, options: Partial<UIShiftObserverOptions> = {}) {
         super();
@@ -60,6 +71,23 @@ export class UIShiftObserver extends EventEmitter<Event> {
 
         this.root = root;
         this.options = optionsWithDefaults;
+
+        this.reset();
+    }
+
+    private reset() {
+        this.mutationObserver?.disconnect();
+
+        clearInterval(this.tickInterval ?? undefined);
+
+        this.subtreeSizes = new WeakMap();
+        this.totalNodeCount = 0;
+        this.mutationEvents = [];
+        this.maxPageIntensity = null;
+        this.currentState = null;
+        this.transitionStartTimestamp = null;
+        this.mutationObserver = null;
+        this.tickInterval = null;
     }
 
     private measureNodeDepth(node: Node): number {
@@ -77,6 +105,17 @@ export class UIShiftObserver extends EventEmitter<Event> {
 
     private computeDepthFactor(depth: number): number {
         return 1 / Math.sqrt(depth + 1);
+    }
+
+    private computeStructuralFactor(node: Node, depth: number): number {
+        const subtreeSize: number | undefined = this.subtreeSizes.get(node);
+
+        if(subtreeSize === undefined) return 0;
+
+        const subtreeFraction: number = subtreeSize / this.totalNodeCount;
+        const depthFactor: number = this.computeDepthFactor(depth);
+
+        return subtreeFraction * depthFactor;
     }
 
     private computeHTMLDeltaFactor(record: MutationRecord, depth: number): number {
@@ -103,13 +142,16 @@ export class UIShiftObserver extends EventEmitter<Event> {
     }
 
     private computeWeight(record: MutationRecord): number {
+        const typeFactor: number | undefined = WEIGHTS.typeFactors[record.type as MutationType];
+
+        if(typeFactor === undefined) return 0;
+
         const depth: number = this.measureNodeDepth(record.target);
 
-        const depthFactor: number = this.computeDepthFactor(depth);
+        const structuralFactor: number = this.computeStructuralFactor(record.target, depth);
         const sizeFactor: number = this.computeHTMLDeltaFactor(record, depth);
-        const typeFactor: number = WEIGHTS.typeFactors[record.type] ?? 0.1;
 
-        return depthFactor * sizeFactor * typeFactor;
+        return structuralFactor * sizeFactor * typeFactor;
     }
 
     private computeWindowSum(tNow: number): number {
@@ -123,12 +165,33 @@ export class UIShiftObserver extends EventEmitter<Event> {
             .reduce((sum: number, event: MutationEvent) => sum + event.weight, 0);
     }
 
-    private tick(): void {
+    private raiseGroundTruth() {
+        const referenceNodes: Element[] = [ ...this.root.querySelectorAll("*") ];
+
+        for(const node of referenceNodes) {
+            const subtreeSize: number = node.querySelectorAll("*").length + 1;
+
+            this.subtreeSizes.set(node, subtreeSize);
+        }
+
+        this.totalNodeCount = referenceNodes.length;
+
+        this.maxPageIntensity = referenceNodes
+            .reduce((sum: number, node: Element) => {
+                const depth: number = this.measureNodeDepth(node);
+                const structuralFactor: number = this.computeStructuralFactor(node, depth);
+
+                return sum + structuralFactor;
+            }, 0);
+    }
+
+    private tick() {
         const tNow: number = performance.now();
         const intensity: number = this.computeWindowSum(tNow);
+        const relativeIntensity: number = intensity / (this.maxPageIntensity ?? 1);
 
-        if(intensity >= this.options.threshold) {
-            if(this.currentState !== "idle") return;
+        if(relativeIntensity >= this.options.threshold) {
+            if((this.currentState ?? "idle") !== "idle") return;
 
             this.currentState = "transition";
             this.transitionStartTimestamp = tNow;
@@ -143,11 +206,13 @@ export class UIShiftObserver extends EventEmitter<Event> {
         }
 
         this.emit(this.currentState, {
-            intensity
+            intensity: relativeIntensity
         });
     }
 
     public observe(): this {
+        this.raiseGroundTruth();
+
         this.mutationObserver = new MutationObserver((records: MutationRecord[]) => {
             const now: number = performance.now();
 
@@ -173,15 +238,7 @@ export class UIShiftObserver extends EventEmitter<Event> {
     }
 
     public disconnect(): this {
-        this.mutationObserver?.disconnect();
-
-        clearInterval(this.tickInterval!);
-
-        this.currentState = "idle";
-        this.mutationEvents = [];
-        this.mutationObserver = null;
-        this.tickInterval = null;
-        this.transitionStartTimestamp = null;
+        this.reset();
 
         return this;
     }

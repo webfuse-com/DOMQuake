@@ -1,6 +1,6 @@
 export type Event =
-    | 'idle'
-    | 'transition';
+    | "idle"
+    | "transition";
 
 export interface EventArgument {
     intensity: number;
