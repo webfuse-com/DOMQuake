@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test</title>
+        <script>
+            window.addEventListener("load", () => {
+                window.__signalEvent("idle");
+            });
+        </script>
+        <style>
+            #slider {
+                display: flex;
+                gap: 10px;
+                width: 320px;
+                overflow: hidden;
+            }
+            #slider > div {
+                width: 100px;
+                height: 100px;
+                background-color: coral;
+            }
+        </style>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const createItem = i => {
+                    const el = document.createElement("div");
+                    
+                    el.innerHTML = `
+                        <section>
+                            <h2>Lorem Ipsum</h2>
+                            <p>
+                                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                            </p>
+                        </section>
+                    `;
+
+                    return el;
+                }
+
+                const slider = document.getElementById("slider");
+
+                let index = 0;
+
+                for(let i = 0; i < 3; i++) {
+                    slider.appendChild(createItem(index++));
+                }
+
+                setInterval(() => {
+                    slider.removeChild(slider.firstElementChild);
+                    slider.appendChild(createItem(index++));
+                }, 500);
+            });
+        </script>
+    </head>
+    <body>
+        <div id="slider"></div>
+    </body>
+</html>
