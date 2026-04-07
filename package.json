@@ -1,5 +1,5 @@
 {
-  "name": "dom-quake",
+  "name": "@webfuse-com/domquake",
   "version": "1.0.0",
   "author": "Thassilo M. Schiepanski",
   "type": "module",
@@ -14,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webfuse-com/dom-seismograph.git"
+    "url": "git+https://github.com/webfuse-com/domquake.git"
   },
   "bugs": {
-    "url": "https://github.com/webfuse-com/dom-seismograph/issues"
+    "url": "https://github.com/webfuse-com/domquake/issues"
   },
-  "homepage": "https://github.com/webfuse-com/dom-seismograph#readme",
+  "homepage": "https://github.com/webfuse-com/domquake#readme",
   "devDependencies": {
     "esbuild": "^0.27.2",
     "husky": "^9.1.7",
