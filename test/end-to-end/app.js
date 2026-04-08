@@ -3,5 +3,5 @@ window.__signalEvent = function(event) {
         new CustomEvent(event, {
             detail: "test"
         })
-);
+    );
 };

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SPA Hydration Demo</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const widgetEl = document.getElementById("widget");
+
+            const hydrateComponent = async (i, throttleMs = 0) => {
+                const html = `
+                    <section>
+                        <h2>Lorem Ipsum ${i}</h2>
+                        <p>
+                            ${
+                                "Lorem ispum dolor sit amet. ".repeat(Math.round(Math.random() * 4 + 1))
+                            }
+                        </p>
+                    </section>
+                `;
+
+                await new Promise(r => setTimeout(r, throttleMs));
+
+                return new Promise(resolve => {
+                    requestIdleCallback(() => {
+                        widgetEl.innerHTML = html;
+
+                        resolve();
+                    });
+                });
+            }
+
+            const hydrate = async () => {
+                const hydrations = [];
+
+                window.__signalEvent("transition");
+
+                await hydrateComponent(0, Math.random() * 10)
+
+                window.__signalEvent("idle");
+            }
+
+            hydrate();
+
+            setInterval(hydrate, 2000);
+        });
+    </script>
+</head>
+<body>
+    <h1>Test</h1>
+    <section>
+        <div>
+            <div id="widget"></div>
+        </div>
+    </section>
+    <section>
+        <h2>Lorem Ipsum</h2>
+        <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        </p>
+    </section>
+    <section>
+        <h2>Lorem Ipsum</h2>
+        <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        </p>
+    </section>
+    <section>
+        <h2>Lorem Ipsum</h2>
+        <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        </p>
+    </section>
+</body>
+</html>
