@@ -4,12 +4,56 @@ import { join } from "path";
 import puppeteer from "puppeteer";
 
 
-const HEADLESS = !process.argv.slice(2).includes("--no-headless");
-const KEEPALIVE = process.argv.slice(2).includes("--keepalive");
 const INTEGRATION_MODULE_PATHS = [
     "./app.js",
     "../../dist/api.js"
 ];
+
+const ARGUMENTS = process.argv.slice(2);
+const HEADLESS = !ARGUMENTS.includes("--no-headless");
+const KEEPALIVE = ARGUMENTS.includes("--keepalive");
+const APPS = [
+    {
+        test: "app.static",
+        expectedEventChain: [ "idle" ],
+        extraWait: 100,
+    },
+    {
+        test: "app.dynamic.harmonic.minor",
+        expectedEventChain: [ "idle" ],
+        extraWait: 1000,
+    },
+    {
+        test: "app.dynamic.harmonic.major",
+        expectedEventChain: [ "idle", "transition", "idle", "transition", "idle", "transition" ]
+    },
+    {
+        test: "app.dynamic.hydrated.minor",
+        expectedEventChain: [ "idle" ],
+        extraWait: 3000
+    },
+    {
+        test: "app.dynamic.hydrated.major",
+        expectedEventChain: [ "idle", "transition", "idle", "transition" ],
+        extraWait: 1000
+    },
+    {
+        test: "app.dynamic.hydrated.major-minor",
+        expectedEventChain: [ "idle", "transition", "idle" ],
+        extraWait: 3000
+    }
+];
+const FILTERED_APPS = (() => {
+    const index = ARGUMENTS.indexOf("--app") + 1;
+
+    if(!index) return APPS;
+
+    const specificAppTest = ARGUMENTS[index];
+
+    if(!specificAppTest) return APPS;
+
+    return APPS.filter(app => app.test === specificAppTest); 
+})();
 
 
 async function runBrowser(url, inPageCallback, inPageCallbackArgs, options = {}) {
@@ -77,22 +121,7 @@ process.on("exit", code => {
 });
 
 
-for(const reference of [
-    {
-        test: "app.static",
-        expectedEventChain: [ "idle" ],
-        extraWait: 100,
-    },
-    {
-        test: "app.static.animated.minor",
-        expectedEventChain: [ "idle" ],
-        extraWait: 1000,
-    },
-    {
-        test: "app.static.animated.major",
-        expectedEventChain: [ "idle", "transition", "idle", "transition" ]
-    }
-]) {
+for(const reference of FILTERED_APPS) {
     const returnValue = await runBrowser(
         `file://${join(import.meta.dirname, reference.test.replace(/(\.html)?$/i, ".html"))}`,
         async reference => {
@@ -102,7 +131,7 @@ for(const reference of [
             const domQuake = new DOMQuake();
 
             domQuake
-                .on("*", event => console.log("Event:", event))
+                .on("*", (event, data) => console.log("Event:", event, data))
                 .observe();
 
             const eventPromises = reference.expectedEventChain

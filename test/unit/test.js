@@ -2,6 +2,11 @@ import { join } from "path";
 import { deepEqual as assertEqual, ok } from "assert";
 
 
+const TESTS = [
+    "EventEmitter"
+];
+
+
 function wrapAssertion(cb, actual = null, expected = null, relationHint = null) {
     try {
         cb();
@@ -63,9 +68,7 @@ process.on("exit", code => {
 });
 
 
-[
-    "EventEmitter"
-]
+TESTS
     .forEach(async reference => {
         await import(
             join(import.meta.dirname, reference.replace(/(\.test\.js)?$/i, ".test.js"))
