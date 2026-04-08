@@ -203,6 +203,8 @@ export class UIShiftObserver extends EventEmitter<Event> {
 
             this.currentState = "idle";
             this.transitionStartTimestamp = null;
+
+            this.raiseGroundTruth();
         }
 
         this.emit(this.currentState, {
