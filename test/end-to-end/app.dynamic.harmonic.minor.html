@@ -2,11 +2,6 @@
 <html>
     <head>
         <title>Test</title>
-        <script>
-            window.addEventListener("load", () => {
-                window.__signalEvent("idle");
-            });
-        </script>
         <style>
             #slider {
                 display: flex;
@@ -43,28 +38,29 @@
                     slider.appendChild(createItem(index++));
                 }, 500);
             });
+
+            window.addEventListener("load", () => {
+                window.__signalEvent("idle");
+            });
         </script>
     </head>
     <body>
         <h1>Test</h1>
         <div id="slider"></div>
-        <section>
-            <h2>Lorem Ipsum</h2>
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-        </section>
-        <section>
-            <h2>Lorem Ipsum</h2>
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-        </section>
-        <section>
-            <h2>Lorem Ipsum</h2>
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-        </section>
+        <template id="section-template">
+            <section>
+                <h2>Lorem Ipsum</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            </section>
+        </template>
+        <script>
+            for(let i = 0; i < 10; i++) {
+                const clone = document.getElementById("section-template")
+                    .content
+                    .cloneNode(true);
+
+                document.body.appendChild(clone);
+            }
+        </script>
     </body>
 </html>

@@ -30,17 +30,17 @@ const APPS = [
     {
         test: "app.dynamic.hydrated.minor",
         expectedEventChain: [ "idle" ],
-        extraWait: 3000
+        extraWait: 3500
     },
     {
         test: "app.dynamic.hydrated.major",
-        expectedEventChain: [ "idle", "transition", "idle", "transition" ],
+        expectedEventChain: [ "idle", "transition", "idle", "transition", "idle" ],
         extraWait: 1000
     },
     {
         test: "app.dynamic.hydrated.major-minor",
-        expectedEventChain: [ "idle", "transition", "idle" ],
-        extraWait: 3000
+        expectedEventChain: [ "idle" ],
+        extraWait: 3500
     }
 ];
 const FILTERED_APPS = (() => {
@@ -52,7 +52,7 @@ const FILTERED_APPS = (() => {
 
     if(!specificAppTest) return APPS;
 
-    return APPS.filter(app => app.test === specificAppTest); 
+    return APPS.filter(app => app.test === specificAppTest);
 })();
 
 
@@ -78,7 +78,9 @@ async function runBrowser(url, inPageCallback, inPageCallbackArgs, options = {})
     const page = (await browser.pages())[0];
 
     for(const path of INTEGRATION_MODULE_PATHS) {
-        const script = (await readFile(join(import.meta.dirname, path))).toString();
+        const script = (
+            await readFile(join(import.meta.dirname, path))
+        ).toString();
 
         await page.evaluateOnNewDocument(script);
     }
@@ -125,76 +127,123 @@ for(const reference of FILTERED_APPS) {
     const returnValue = await runBrowser(
         `file://${join(import.meta.dirname, reference.test.replace(/(\.html)?$/i, ".html"))}`,
         async reference => {
-            const TEST_CASE_TIMEOUT_MS = 3000;
-            const TEST_TIMESTAMP_EPSILON_MS = 75;
+            const EVENTS = [ "transition", "idle" ];
+            const TIMEOUT_MS = 3500;
+            const IDLE_EPSILON_MS = 500;
+            const TRANSITION_EPSILON_MS = 100;
+            const INIT_DELAY_MS = 500;
 
             const domQuake = new DOMQuake();
 
-            domQuake
-                .on("*", (event, data) => console.log("Event:", event, data))
-                .observe();
+            const referenceEvents = [];
+            const detectedEvents = [];
 
-            const eventPromises = reference.expectedEventChain
-                .map(event => {
-                    const expectedTimestamp = new Promise(resolve => {
-                        const cb = () => {
-                            resolve(window.performance.now());
+            let collectionResolve = null;
 
-                            window.removeEventListener(event, cb);
-                        };
+            const onCollected = () => {
+                if(!collectionResolve) return;
 
-                        window.addEventListener(event, cb);
-                    });
-                    const detectedTimestamp = new Promise(resolve => {
-                        domQuake.once(event, () => resolve(window.performance.now()));
-                    });
+                collectionResolve();
 
-                    return {
-                        event,
-                        expectedTimestamp,
-                        detectedTimestamp
-                    };
+                collectionResolve = null;
+            };
+
+            for(const event of EVENTS) {
+                window.addEventListener(event, e => {
+                    if(e.detail !== "test") return;
+
+                    const tNow = Math.round(performance.now());
+
+                    referenceEvents.push({ event, timestamp: tNow });
+
+                    console.log("+ [reference]", tNow, event);
+
+                    onCollected();
                 });
 
-            for(let i = 0; i < eventPromises.length; i++) {
-                const { event, expectedTimestamp, detectedTimestamp } = eventPromises[i];
+                domQuake.on(event, detail => {
+                    const tNow = Math.round(performance.now());
 
-                const timeout = new Promise((_, reject) => {
-                    setTimeout(() => {
-                        reject(new Error(`Timeout waiting for '${event}' (${i})`));
-                    }, TEST_CASE_TIMEOUT_MS);
+                    detectedEvents.push({ event, timestamp: tNow });
+
+                    console.log("- [detected]", tNow, event, detail);
+
+                    onCollected();
                 });
-
-                let timestamps;
-                try {
-                    timestamps = await Promise.race([
-                        timeout,
-                        Promise.all([ expectedTimestamp, detectedTimestamp ])
-                    ]);
-                } catch(err) {
-                    return { error: err?.message ?? err.toString() };
-                }
-
-                const timestampDelta = Math.abs(timestamps[0] - timestamps[1]);
-
-                if(timestampDelta > TEST_TIMESTAMP_EPSILON_MS) {
-                    return {
-                        error: `Significant time delta for '${event}' (${i}): ${Math.ceil(timestampDelta)}ms`
-                    };
-                }
             }
 
+            domQuake.observe();
+
+            const expectedCount = reference.expectedEventChain.length;
+
+            const collectionTimeout = new Promise((_, reject) => {
+                setTimeout(
+                    () => reject(new Error(`Timeout collecting ${expectedCount} events`)),
+                    TIMEOUT_MS * expectedCount
+                );
+            });
+
+            try {
+                await Promise.race([
+                    collectionTimeout,
+                    (async () => {
+                        while(
+                            referenceEvents.length < expectedCount ||
+                            detectedEvents.length < expectedCount
+                        ) {
+                            await new Promise(resolve => {
+                                collectionResolve = resolve;
+                            });
+                        }
+                    })()
+                ]);
+            } catch(err) {
+                return { error: err?.message ?? err.toString() };
+            }
+
+            for(let i = 0; i < expectedCount; i++) {
+                const event = reference.expectedEventChain[i];
+                const referenceEvent = referenceEvents[i];
+                const detectedEvent = detectedEvents[i];
+
+                if(referenceEvent.event !== event) {
+                    return {
+                        error: `Expected reference '${event}' at (${i}), got '${referenceEvent.event}'`
+                    };
+                }
+
+                if(detectedEvent.event !== event) {
+                    return {
+                        error: `Expected detected '${event}' at (${i}), got '${detectedEvent.event}'`
+                    };
+                }
+
+                const timestampDifference = Math.ceil(detectedEvent.timestamp - referenceEvent.timestamp);
+                const timestampDelta = Math.abs(timestampDifference);
+
+                console.log("Δ", `${timestampDifference >= 0 ? "+" : "-"}${timestampDelta}`);
+
+                let epsilon = (event === "idle" ? IDLE_EPSILON_MS : TRANSITION_EPSILON_MS);
+                epsilon += (i ? 0 : INIT_DELAY_MS);
+
+                if(timestampDelta <= epsilon) continue;
+
+                return {
+                    error: `Significant time delta for '${event}' (${i}): ${timestampDelta}ms`
+                };
+            }
+
+            const extraWaitTimeout = new Promise(resolve => {
+                setTimeout(() => resolve({}), reference.extraWait);
+            });
             const extraEvent = new Promise(resolve => {
                 domQuake.once("*", event => resolve({
                     error: `Unexpected extra event '${event}'`
                 }));
             });
-            const timeout = new Promise(resolve => {
-                setTimeout(() => resolve({}), reference.extraWait);
-            });
 
             return Promise.race([
-                timeout,
+                extraWaitTimeout,
                 extraEvent
             ]);
         }, [

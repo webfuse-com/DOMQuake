@@ -2,11 +2,6 @@
 <html>
     <head>
         <title>Test</title>
-        <script>
-            window.addEventListener("load", () => {
-                window.__signalEvent("idle");
-            });
-        </script>
         <style>
             #slider {
                 display: flex;
@@ -42,10 +37,9 @@
                 let index = 0;
 
                 for(let i = 0; i < 3; i++) {
-                    window.__signalEvent("transition");
-
                     slider.appendChild(createItem(index++));
                 }
+
                 window.__signalEvent("idle");
 
                 setInterval(() => {
