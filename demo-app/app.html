@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Lorem Ipsum</title>
+        <title>AnyAI</title>
         <link rel="stylesheet" href="./app.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
         <script src="../dist/api.js"></script>
@@ -13,7 +13,7 @@
             <header>
                 <nav>
                     <div class="logo">
-                        Lorem
+                        AnyAI
                     </div>
                     <button v-for="p in data.pages" :key="p.id" :class="{ active: current === p.id }" @click="current = p.id">
                         {{ p.label }}
@@ -23,16 +23,16 @@
             <main>
                 <div v-if="current === 'home'" class="page">
                     <h1>
-                        Lorem Ipsum Dolor
+                        Autonomous Web Agents for Modern Workflows
                     </h1>
                     <strong>
-                        Sit amet consectetur adipiscing elit sed do eiusmod tempor
+                        Build, deploy, and scale intelligent agents that automate your digital tasks
                     </strong>
                     <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                        AnyAI enables businesses to create powerful web agents that can browse, analyze, and act across the internet. From data extraction to workflow automation, our platform handles complex tasks with ease.
                     </p>
                     <p>
-                        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                        Designed for developers and teams, AnyAI provides flexible APIs, real-time control, and seamless integrations to bring intelligent automation into your products and operations.
                     </p>
                     <div class="card-grid">
                         <div class="card" v-for="card in data.cards" :key="card.title">
@@ -70,16 +70,16 @@
                 </div>
                 <div v-if="current === 'about'" class="page">
                     <h1>
-                        Ipsum Dolor Sit
+                        About AnyAI
                     </h1>
                     <strong>
-                        Amet consectetur adipiscing elit quisque vehicula augue vel ligula
+                        We build intelligent agents that simplify and automate web-based work
                     </strong>
                     <p>
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque vehicula augue vel ligula facilisis, vel dignissim nisi volutpat. Proin euismod, arcu ac laoreet tincidunt, nisl lorem dictum lorem, ut tincidunt orci ligula vitae augue.
+                        AnyAI is focused on advancing the capabilities of web agents, enabling them to understand, navigate, and interact with online environments like a human would—but faster and more reliably.
                     </p>
                     <p>
-                        Maecenas at nisl blandit, commodo augue in, aliquet dolor. Pellentesque porttitor, neque ut pretium tincidunt, ante sapien condimentum velit, vel gravida lorem velit sed augue.
+                        Our mission is to make automation accessible, scalable, and powerful for teams of all sizes, helping you save time and focus on what truly matters.
                     </p>
                     <div class="avatar-row">
                         <div class="avatar-card" v-for="member in data.team" :key="member.name">
@@ -95,42 +95,42 @@
                 </div>
                 <div v-if="current === 'contact'" class="page">
                     <h1>
-                        Dolor Sit Amet
+                        Get in Touch
                     </h1>
                     <strong>
-                        Consectetur adipiscing elit sed do eiusmod tempor incididunt
+                        Tell us how we can help you automate your workflows
                     </strong>
                     <form @submit.prevent="handleSubmit">
                         <label>
-                            Lorem Ipsum
+                            Your Name
                         </label>
-                        <input v-model="form.name" type="text" placeholder="Dolor sit amet">
+                        <input v-model="form.name" type="text" placeholder="Enter your name">
                         <label>
-                            Ipsum Dolor
+                            Email Address
                         </label>
-                        <input v-model="form.email" type="email" placeholder="lorem@ipsum.dolor">
+                        <input v-model="form.email" type="email" placeholder="you@company.com">
                         <label>
-                            Sit Amet
+                            Message
                         </label>
-                        <textarea v-model="form.message" placeholder="Lorem ipsum..."></textarea>
+                        <textarea v-model="form.message" placeholder="Tell us about your use case..."></textarea>
                         <button class="submit" type="submit">
-                            Lorem Ipsum
+                            Send Message
                         </button>
                     </form>
                 </div>
             </main>
             <footer>
                 <span>
-                    2026 Lorem Ipsum
+                    2026 AnyAI — Intelligent Web Agents
                 </span>
                 <div id="ad">
                     <script>
                         setTimeout(() => {
                             document.querySelector("#ad").innerHTML = `
                                 <br>
-                                <img id="ad" src="./img.png" height="128" alt="Lorem ipsum dolor sit amet">
+                                <img id="ad" src="./img.png" height="148" alt="Automate your workflows with AnyAI agents">
                             `;
-                        }, 8000);
+                        }, 7000);
                     </script>
                 </div>
             </footer>

@@ -5,9 +5,9 @@ new DOMQuake()
     .observe();
 
 new DOMQuake({
-    threshold: 0.015
+    threshold: 0.0175
 })
     .on("*", (event, detail) => {
-        console.log("[threshold=0.015]", event, detail);
+        console.log("[threshold=0.0175]", event, detail);
     })
     .observe();

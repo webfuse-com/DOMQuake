@@ -7,71 +7,71 @@ createApp({
             pages: [
                 {
                     id: "home",
-                    label: "Lorem"
+                    label: "Home"
                 },
                 {
                     id: "about",
-                    label: "Ipsum"
+                    label: "About"
                 },
                 {
                     id: "contact",
-                    label: "Dolor"
+                    label: "Contact"
                 }
             ],
             cards: [
                 {
-                    title: "Lorem Ipsum",
-                    body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum."
+                    title: "Automate Web Tasks",
+                    body: "Build agents that can navigate websites, extract data, and complete workflows automatically."
                 },
                 {
-                    title: "Dolor Sit",
-                    body: "Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas."
+                    title: "State-of-the-Art APIs",
+                    body: "Integrate powerful web automation into your apps with simple, flexible APIs."
                 },
                 {
-                    title: "Amet Consectetur",
-                    body: "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae."
+                    title: "Scalable Infrastructure",
+                    body: "Run thousands of intelligent agents reliably with cloud-based orchestration."
                 }
             ],
             team: [
                 {
-                    initial: "L",
-                    name: "Lorem Ipsum",
-                    role: "Dolor sit amet",
-                    color: "#3498db"
+                    initial: "AC",
+                    name: "Alex Carter",
+                    role: "Founder & CEO",
+                    color: "#548687"
                 },
                 {
-                    initial: "I",
-                    name: "Ipsum Dolor",
-                    role: "Consectetur adipiscing",
-                    color: "#e74c3c"
+                    initial: "CM",
+                    name: "Maya Chen",
+                    role: "CTO",
+                    color: "#C49A1C"
                 },
                 {
-                    initial: "D",
-                    name: "Dolor Amet",
-                    role: "Elit sed eiusmod",
-                    color: "#2ecc71"
+                    initial: "LN",
+                    name: "Liam Novak",
+                    role: "CFO",
+                    color: "#B43C2F"
                 }
             ],
             slides: [
                 {
-                    title: "Lorem Ipsum",
-                    body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit ut labore.",
-                    color: "#3498db"
+                    title: "Build Intelligent Agents",
+                    body: "Create agents that understand and interact with the web in real time.",
+                    color: "#71bbec"
                 },
                 {
-                    title: "Dolor Sit Amet",
-                    body: "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-                    color: "#9b59b6"
+                    title: "Automate Complex Workflows",
+                    body: "From scraping to task execution, let agents handle repetitive processes.",
+                    color: "#c783e2"
                 },
                 {
-                    title: "Consectetur Elit",
-                    body: "Ut enim ad minim veniam quis nostrud exercitation ullamco laboris.",
-                    color: "#e67e22"
+                    title: "Integrate Anywhere",
+                    body: "Connect AnyAI with your tools and systems in no time.",
+                    color: "#ffa04d"
                 },
                 {
-                    title: "Adipiscing Velit",
-                    body: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum.",
-                    color: "#27ae60"
+                    title: "Scale Effortlessly",
+                    body: "Deploy and manage agents at scale with reliable infrastructure.",
+                    color: "#5eda91"
                 },
             ]
         };
@@ -85,7 +85,7 @@ createApp({
         const refreshSliderInterval = () => {
             clearInterval(sliderInterval);
 
-            sliderInterval = setInterval(nextSlide, 3500);
+            sliderInterval = setInterval(nextSlide, 3000);
         };
 
         refreshSliderInterval();
@@ -112,7 +112,7 @@ createApp({
         });
 
         function handleSubmit() {
-            alert("Lorem ipsum!");
+            alert("Thanks! Your message has been sent.");
 
             form.name = "";
             form.email = "";
