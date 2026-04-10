@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lorem Ipsum</title>
+        <link rel="stylesheet" href="./app.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+        <script src="../dist/api.js"></script>
+    </head>
+    <body>
+        <div id="app">
+            <header>
+                <nav>
+                    <div class="logo">
+                        Lorem
+                    </div>
+                    <button v-for="p in data.pages" :key="p.id" :class="{ active: current === p.id }" @click="current = p.id">
+                        {{ p.label }}
+                    </button>
+                </nav>
+            </header>
+            <main>
+                <div v-if="current === 'home'" class="page">
+                    <h1>
+                        Lorem Ipsum Dolor
+                    </h1>
+                    <strong>
+                        Sit amet consectetur adipiscing elit sed do eiusmod tempor
+                    </strong>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+                    <p>
+                        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    </p>
+                    <div class="card-grid">
+                        <div class="card" v-for="card in data.cards" :key="card.title">
+                            <h3>
+                                {{ card.title }}
+                            </h3>
+                            <p>
+                                {{ card.body }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="slider">
+                        <div class="slider-track" :style="{ transform: `translateX(-${slideIndex * 100}%)` }">
+                            <div class="slide" v-for="(slide, i) in data.slides" :key="i" :style="{ background: slide.color }">
+                                <h2>
+                                    {{ slide.title }}
+                                </h2>
+                                <p>
+                                    {{ slide.body }}
+                                </p>
+                            </div>
+                        </div>
+                        <button class="slider-btn prev" @click="prevSlide">&#8592;</button>
+                        <button class="slider-btn next" @click="nextSlide">&#8594;</button>
+                        <div class="slider-dots">
+                            <span
+                                v-for="(slide, i) in data.slides"
+                                :key="i"
+                                class="dot"
+                                :class="{ active: i === slideIndex }"
+                                @click="slideIndex = i"
+                            ></span>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="current === 'about'" class="page">
+                    <h1>
+                        Ipsum Dolor Sit
+                    </h1>
+                    <strong>
+                        Amet consectetur adipiscing elit quisque vehicula augue vel ligula
+                    </strong>
+                    <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque vehicula augue vel ligula facilisis, vel dignissim nisi volutpat. Proin euismod, arcu ac laoreet tincidunt, nisl lorem dictum lorem, ut tincidunt orci ligula vitae augue.
+                    </p>
+                    <p>
+                        Maecenas at nisl blandit, commodo augue in, aliquet dolor. Pellentesque porttitor, neque ut pretium tincidunt, ante sapien condimentum velit, vel gravida lorem velit sed augue.
+                    </p>
+                    <div class="avatar-row">
+                        <div class="avatar-card" v-for="member in data.team" :key="member.name">
+                            <div class="avatar" :style="{ background: member.color }">{{ member.initial }}</div>
+                            <h4>
+                                {{ member.name }}
+                            </h4>
+                            <span>
+                                {{ member.role }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="current === 'contact'" class="page">
+                    <h1>
+                        Dolor Sit Amet
+                    </h1>
+                    <strong>
+                        Consectetur adipiscing elit sed do eiusmod tempor incididunt
+                    </strong>
+                    <form @submit.prevent="handleSubmit">
+                        <label>
+                            Lorem Ipsum
+                        </label>
+                        <input v-model="form.name" type="text" placeholder="Dolor sit amet">
+                        <label>
+                            Ipsum Dolor
+                        </label>
+                        <input v-model="form.email" type="email" placeholder="lorem@ipsum.dolor">
+                        <label>
+                            Sit Amet
+                        </label>
+                        <textarea v-model="form.message" placeholder="Lorem ipsum..."></textarea>
+                        <button class="submit" type="submit">
+                            Lorem Ipsum
+                        </button>
+                    </form>
+                </div>
+            </main>
+            <footer>
+                <span>
+                    2026 Lorem Ipsum
+                </span>
+                <div id="ad">
+                    <script>
+                        setTimeout(() => {
+                            document.querySelector("#ad").innerHTML = `
+                                <br>
+                                <img id="ad" src="./img.png" height="128" alt="Lorem ipsum dolor sit amet">
+                            `;
+                        }, 8000);
+                    </script>
+                </div>
+            </footer>
+        </div>
+        <script src="./app.js"></script>
+        <script src="./app.DOMQuake.js"></script>
+    </body>
+</html>
