@@ -9,7 +9,8 @@ type MutationType =
 
 
 interface DOMQuakeOptions {
-    minIdleInTransitionTicks: number;
+    quiescenceTicks: number;
+    root: Element;
     threshold: number;
     tickMs: number;
     windowTicks: number;
@@ -23,16 +24,18 @@ interface MutationEvent {
 const WEIGHTS: {
     htmlDelta: {
         maxDepthForSampling: number;
-        maxHtmlLength: number
+        maxHtmlLength: number;
+        significantInjectionChars: number
     };
     maxDepth: number;
     typeFactors: Record<MutationType, number>
 } = {
     htmlDelta: {
         maxDepthForSampling: 4,
-        maxHtmlLength: 50000
+        maxHtmlLength: 50000,
+        significantInjectionChars: 1000
     },
-    maxDepth: 8,
+    maxDepth: 10,
     typeFactors: {
         childList: 1.0,
         attributes: 0.4,
@@ -40,8 +43,8 @@ const WEIGHTS: {
     }
 };
 
-const DEFAULT_OPTIONS: DOMQuakeOptions = {
-    minIdleInTransitionTicks: 3,
+const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
+    quiescenceTicks: 3,
     threshold: 0.5,
     tickMs: 50,
     windowTicks: 6
@@ -49,28 +52,30 @@ const DEFAULT_OPTIONS: DOMQuakeOptions = {
 
 
 export class DOMQuake extends EventEmitter<Event> {
-    private readonly root: Element;
     private readonly options: DOMQuakeOptions;
 
-    private subtreeSizes!: WeakMap<Node, number>; // O(1)
+    private subtreeSizes!: WeakMap<Node, number>;
     private currentState!: Event;
     private totalNodeCount!: number;
     private idleInTransitionTicks!: number;
     private mutationEvents!: MutationEvent[];
     private pendingMutationRecords!: MutationRecord[];
     private maxPageIntensity!: number | null;
+    private hasStaleGroundTruth!: boolean;
     private mutationObserver!: MutationObserver | null;
     private tickInterval!: ReturnType<typeof setInterval> | null;
 
-    constructor(root: Element = document.documentElement, options: Partial<DOMQuakeOptions> = {}) {
+    constructor(options: Partial<DOMQuakeOptions> = {}) {
         super();
 
         const optionsWithDefaults: DOMQuakeOptions = {
             ...DEFAULT_OPTIONS,
+
+            root: window.document.documentElement,
+
             ...options
         };
 
-        this.root = root;
         this.options = optionsWithDefaults;
 
         this.reset();
@@ -88,6 +93,7 @@ export class DOMQuake extends EventEmitter<Event> {
         this.mutationEvents = [];
         this.pendingMutationRecords = [];
         this.maxPageIntensity = null;
+        this.hasStaleGroundTruth = false;
         this.mutationObserver = null;
         this.tickInterval = null;
     }
@@ -140,6 +146,10 @@ export class DOMQuake extends EventEmitter<Event> {
                 return sum + htmlSize;
             }, 0);
 
+        if(totalHtmlDelta >= WEIGHTS.htmlDelta.significantInjectionChars) {
+            this.raiseGroundTruth();
+        }
+
         return Math.log2(totalHtmlDelta + 1) + 1;
     }
 
@@ -159,7 +169,21 @@ export class DOMQuake extends EventEmitter<Event> {
         return structuralFactor * sizeFactor * typeFactor;
     }
 
+
     private flushPendingRecords(): void {
+        if(this.pendingMutationRecords.length === 0) return;
+
+        if(this.hasStaleGroundTruth) {
+            const snapshot: MutationRecord[] = this.pendingMutationRecords;
+
+            this.pendingMutationRecords = [];
+
+            this.raiseGroundTruth();
+
+            this.pendingMutationRecords = snapshot;
+            this.hasStaleGroundTruth = false;
+        }
+
         const tNow: number = performance.now();
 
         for(const record of this.pendingMutationRecords) {
@@ -179,12 +203,13 @@ export class DOMQuake extends EventEmitter<Event> {
     private computeWindowSum(tNow: number): number {
         const cutoff: number = tNow - (this.options.windowTicks * this.options.tickMs);
 
-        let i = 0;
-        while (i < this.mutationEvents.length && this.mutationEvents[i].timestamp < cutoff) {
+        let i: number = 0;
+
+        while(i < this.mutationEvents.length && this.mutationEvents[i].timestamp < cutoff) {
             i++;
         }
 
-        if (i > 0) {
+        if(i > 0) {
             this.mutationEvents = this.mutationEvents.slice(i);
         }
 
@@ -193,11 +218,11 @@ export class DOMQuake extends EventEmitter<Event> {
     }
 
     private raiseGroundTruth() {
-        const nodes = [...this.root.querySelectorAll("*")];
-        const sizes = new WeakMap<Node, number>();
+        const nodes: Element[] = [ ...this.options.root.querySelectorAll("*") ];
+        const sizes: WeakMap<Node, number> = new WeakMap();
 
         for(const node of nodes.reverse()) {
-            let size = node.children.length;
+            let size: number = node.children.length;
 
             for(const child of node.children) {
                 size += sizes.get(child) ?? 0;
@@ -212,8 +237,8 @@ export class DOMQuake extends EventEmitter<Event> {
 
         this.totalNodeCount = nodes.length;
 
-        this.maxPageIntensity = nodes.reduce((sum, node) => {
-            const depth = this.measureNodeDepth(node);
+        this.maxPageIntensity = nodes.reduce((sum: number, node: Element) => {
+            const depth: number = this.measureNodeDepth(node);
 
             return sum + this.computeStructuralFactor(node, depth);
         }, 0);
@@ -237,12 +262,11 @@ export class DOMQuake extends EventEmitter<Event> {
 
             this.idleInTransitionTicks++;
 
-            if(this.idleInTransitionTicks < this.options.minIdleInTransitionTicks) return;
+            if(this.idleInTransitionTicks < this.options.quiescenceTicks) return;
 
             this.currentState = "idle";
             this.mutationEvents = [];
-
-            this.raiseGroundTruth();
+            this.hasStaleGroundTruth = true;
         }
 
         this.emit(this.currentState, {
@@ -258,7 +282,7 @@ export class DOMQuake extends EventEmitter<Event> {
         });
 
         this.mutationObserver
-            .observe(this.root, {
+            .observe(this.options.root, {
                 childList: true,
                 subtree: true,
                 attributes: true,
