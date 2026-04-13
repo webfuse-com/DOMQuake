@@ -114,7 +114,7 @@
     }
     resolveTarget(node) {
       let resolvedNode = node;
-      while (resolvedNode.nodeType === Node.COMMENT_NODE && resolvedNode.parentNode) {
+      while (resolvedNode.nodeType !== Node.ELEMENT_NODE && resolvedNode.parentNode) {
         resolvedNode = resolvedNode.parentNode;
       }
       return resolvedNode;
@@ -215,10 +215,7 @@
       this.pruneStaleEvents(now);
       const intensity = this.computeWindowSum();
       const relativeIntensity = intensity / (this.domIntensity || 1);
-      this.decayedIntensity = Math.max(
-        relativeIntensity,
-        this.decayedIntensity * CONSTRAINTS.intensityDecayFactor
-      );
+      this.decayedIntensity = relativeIntensity <= this.decayedIntensity ? this.decayedIntensity * CONSTRAINTS.intensityDecayFactor : relativeIntensity;
       const isAboveEntryThreshold = relativeIntensity >= this.options.threshold;
       const isAboveExitThreshold = this.decayedIntensity > CONSTRAINTS.exitThreshold;
       if (isAboveEntryThreshold && this.currentState !== "transition") {

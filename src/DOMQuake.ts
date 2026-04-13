@@ -141,10 +141,9 @@ export class DOMQuake extends EventEmitter<Event> {
     }
 
     private resolveTarget(node: Node): Node {
-        // Comment nodes are used as anchors by frameworks
         let resolvedNode: Node = node;
 
-        while(resolvedNode.nodeType === Node.COMMENT_NODE && resolvedNode.parentNode) {
+        while(resolvedNode.nodeType !== Node.ELEMENT_NODE && resolvedNode.parentNode) {
             resolvedNode = resolvedNode.parentNode;
         }
 
@@ -289,10 +288,9 @@ export class DOMQuake extends EventEmitter<Event> {
         const intensity: number = this.computeWindowSum();
         const relativeIntensity: number = intensity / (this.domIntensity || 1);
 
-        this.decayedIntensity = Math.max(
-            relativeIntensity,
-            this.decayedIntensity * CONSTRAINTS.intensityDecayFactor
-        );
+        this.decayedIntensity = (relativeIntensity <= this.decayedIntensity)
+            ? this.decayedIntensity * CONSTRAINTS.intensityDecayFactor
+            : relativeIntensity;
 
         const isAboveEntryThreshold: boolean = (relativeIntensity >= this.options.threshold);
         const isAboveExitThreshold: boolean = (this.decayedIntensity > CONSTRAINTS.exitThreshold);
