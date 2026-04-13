@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DOMQuake Demo</title>
+        <link rel="stylesheet" href="./app.css">
+        <script src="./app.js"></script>
+        <script>
+            const IFRAME_SRC = "../target/app.html";
+
+            window.start = function(threshold) {
+                console.log(5543, threshold)
+                document.querySelector("iframe").setAttribute("src", IFRAME_SRC);
+
+                setTimeout(() => new TimelineChart(threshold), 100);
+            };
+            window.startForms = function(e) {
+                e.preventDefault();
+
+                document.querySelector("iframe").setAttribute("src", IFRAME_SRC)
+
+                let threshold = document.querySelector("input[name='threshold']").value || "0.5";
+                threshold = parseFloat(threshold);
+                threshold = !isNaN(threshold) ? threshold : 0.5;
+
+                start(threshold);
+            };
+        </script>
+    </head>
+    <body>
+        <template id="chart-template">
+            <section class="chart">
+                <canvas height="128"></canvas>
+            </section>
+        </template>
+        <header>
+            <form onsubmit="startForms(event)">
+                <span>Threshold:</span>
+                <div>
+                    <input type="text" name="threshold" placeholder="0.5">
+                    <button type="submit">Start</button>
+                </div>
+                <div>
+                    <button type="button" onclick="start(0.5)">0.5</button>
+                    <button type="button" onclick="start(0.0175)">0.0175</button>
+                </div>
+            </form>
+        </header>
+        <main>
+            <iframe></iframe>
+        </main>
+    </body>
+</html>
