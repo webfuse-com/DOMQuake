@@ -22,7 +22,7 @@
                     
                     el.innerHTML = `
                         <section>
-                            <h2>Lorem Ipsum</h2>
+                            <h2>${i}</h2>
                             <p>
                                 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
                             </p>
@@ -36,6 +36,10 @@
 
                 let index = 0;
 
+                window.__signalEvent("idle");
+
+                window.__signalEvent("transition");
+                
                 for(let i = 0; i < 3; i++) {
                     slider.appendChild(createItem(index++));
                 }

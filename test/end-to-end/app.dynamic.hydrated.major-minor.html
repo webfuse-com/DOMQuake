@@ -51,7 +51,7 @@
                     });
                 }
 
-                const hydrate = async (init = false) => {
+                const hydrate = async () => {
                     const hydrations = [];
 
                     for(let i = 0; i < (init ? 100 : 3); i++) {
@@ -61,11 +61,15 @@
                     }
 
                     await Promise.all(hydrations);
-
-                    init && window.__signalEvent("idle");
                 }
 
+                window.__signalEvent("idle");
+
+                window.__signalEvent("transition");
+
                 hydrate(true);
+
+                window.__signalEvent("idle");
 
                 setInterval(hydrate, 3000);
             });

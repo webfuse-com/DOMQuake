@@ -54,7 +54,7 @@
                 const hydrate = async (init = false) => {
                     const hydrations = [];
 
-                    !init && window.__signalEvent("transition");
+                    window.__signalEvent("transition");
 
                     for(let i = 0; i < 3; i++) {
                         hydrations.push(
@@ -66,6 +66,8 @@
 
                     window.__signalEvent("idle");
                 }
+
+                window.__signalEvent("idle");
 
                 hydrate(true);
 

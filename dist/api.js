@@ -30,6 +30,8 @@
 
   // src/DOMQuake.ts
   var CONSTRAINTS = {
+    exitThreshold: 0.02,
+    intensityDecayFactor: 0.1,
     maxHTMLDeltaDepthForSampling: 4,
     maxHTMLDeltaLength: 5e4,
     maxDOMMeasureDepth: 32
@@ -40,7 +42,6 @@
     characterData: 0.1
   };
   var DEFAULT_OPTIONS = {
-    quiescenceTicks: 3,
     threshold: 0.5,
     tickMs: 50,
     windowTicks: 6
@@ -54,7 +55,7 @@
     domDepth;
     domIntensity;
     totalNodeCount;
-    idleInTransitionTicks;
+    decayedIntensity;
     mutationEvents;
     pendingMutationRecords;
     hasStaleDOMMeasures;
@@ -79,7 +80,7 @@
       this.currentState = "transition";
       this.domDepth = 0;
       this.totalNodeCount = 0;
-      this.idleInTransitionTicks = 0;
+      this.decayedIntensity = 0;
       this.mutationEvents = [];
       this.pendingMutationRecords = [];
       this.domIntensity = null;
@@ -195,8 +196,10 @@
         const target = this.resolveTarget(record.target);
         const existingIndex = this.mutationEvents.findIndex((e) => e.target === target);
         if (existingIndex >= 0) {
-          const existing = this.mutationEvents[existingIndex];
-          existing.weight = Math.max(existing.weight, weight);
+          this.mutationEvents[existingIndex].weight = Math.max(
+            this.mutationEvents[existingIndex].weight,
+            weight
+          );
         } else {
           this.mutationEvents.push({
             target,
@@ -212,24 +215,24 @@
       this.pruneStaleEvents(now);
       const intensity = this.computeWindowSum();
       const relativeIntensity = intensity / (this.domIntensity || 1);
-      const isAboveThreshold = relativeIntensity >= this.options.threshold;
-      if (isAboveThreshold && this.currentState === "transition" || !isAboveThreshold && this.currentState === "idle") {
-        this.emitOnTick && this.emit("tick", { intensity: relativeIntensity });
-        return;
-      }
-      if (isAboveThreshold) {
-        this.idleInTransitionTicks = 0;
+      this.decayedIntensity = Math.max(
+        relativeIntensity,
+        this.decayedIntensity * CONSTRAINTS.intensityDecayFactor
+      );
+      const isAboveEntryThreshold = relativeIntensity >= this.options.threshold;
+      const isAboveExitThreshold = this.decayedIntensity > CONSTRAINTS.exitThreshold;
+      if (isAboveEntryThreshold && this.currentState !== "transition") {
         this.currentState = "transition";
-      } else {
-        this.idleInTransitionTicks++;
-        if (this.idleInTransitionTicks < this.options.quiescenceTicks) return;
+        this.emit(this.currentState, { intensity: relativeIntensity });
+      } else if (!isAboveExitThreshold && this.currentState !== "idle") {
         this.currentState = "idle";
         this.mutationEvents = [];
+        this.decayedIntensity = 0;
         this.hasStaleDOMMeasures = true;
+        this.emit(this.currentState, { intensity: relativeIntensity });
+      } else {
+        this.emitOnTick && this.emit("tick", { intensity: relativeIntensity });
       }
-      this.emit(this.currentState, {
-        intensity: relativeIntensity
-      });
     }
     observe() {
       this.measureDOM();

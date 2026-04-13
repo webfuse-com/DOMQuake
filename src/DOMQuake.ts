@@ -9,7 +9,6 @@ type MutationType =
 
 
 interface DOMQuakeOptions {
-    quiescenceTicks: number;
     root: Element;
     threshold: number;
     tickMs: number;
@@ -22,12 +21,15 @@ interface MutationEvent {
     weight: number;
 }
 
-
 const CONSTRAINTS: {
+    exitThreshold: number;
+    intensityDecayFactor: number;
     maxHTMLDeltaDepthForSampling: number;
     maxHTMLDeltaLength: number;
     maxDOMMeasureDepth: number;
 } = {
+    exitThreshold: 0.02,
+    intensityDecayFactor: 0.1,
     maxHTMLDeltaDepthForSampling: 4,
     maxHTMLDeltaLength: 50000,
     maxDOMMeasureDepth: 32
@@ -44,7 +46,6 @@ const MUTATION_WEIGHTS: {
 };
 
 const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
-    quiescenceTicks: 3,
     threshold: 0.5,
     tickMs: 50,
     windowTicks: 6
@@ -61,7 +62,7 @@ export class DOMQuake extends EventEmitter<Event> {
     private domDepth!: number;
     private domIntensity!: number | null;
     private totalNodeCount!: number;
-    private idleInTransitionTicks!: number;
+    private decayedIntensity!: number;
     private mutationEvents!: MutationEvent[];
     private pendingMutationRecords!: MutationRecord[];
     private hasStaleDOMMeasures!: boolean;
@@ -95,7 +96,7 @@ export class DOMQuake extends EventEmitter<Event> {
         this.currentState = "transition";
         this.domDepth = 0;
         this.totalNodeCount = 0;
-        this.idleInTransitionTicks = 0;
+        this.decayedIntensity = 0;
         this.mutationEvents = [];
         this.pendingMutationRecords = [];
         this.domIntensity = null;
@@ -140,7 +141,7 @@ export class DOMQuake extends EventEmitter<Event> {
     }
 
     private resolveTarget(node: Node): Node {
-        // Comment nodes are commonly used as anchors by frameworks
+        // Comment nodes are used as anchors by frameworks
         let resolvedNode: Node = node;
 
         while(resolvedNode.nodeType === Node.COMMENT_NODE && resolvedNode.parentNode) {
@@ -264,9 +265,10 @@ export class DOMQuake extends EventEmitter<Event> {
                 .findIndex(e => e.target === target);
 
             if(existingIndex >= 0) {
-                const existing: MutationEvent = this.mutationEvents[existingIndex];
-
-                existing.weight = Math.max(existing.weight, weight);
+                this.mutationEvents[existingIndex].weight = Math.max(
+                    this.mutationEvents[existingIndex].weight,
+                    weight
+                );
             } else {
                 this.mutationEvents.push({
                     target,
@@ -287,33 +289,28 @@ export class DOMQuake extends EventEmitter<Event> {
         const intensity: number = this.computeWindowSum();
         const relativeIntensity: number = intensity / (this.domIntensity || 1);
 
-        const isAboveThreshold: boolean = (relativeIntensity >= this.options.threshold);
+        this.decayedIntensity = Math.max(
+            relativeIntensity,
+            this.decayedIntensity * CONSTRAINTS.intensityDecayFactor
+        );
 
-        if(
-            (isAboveThreshold && this.currentState === "transition") ||
-            (!isAboveThreshold && this.currentState === "idle")
-        ) {
-            this.emitOnTick && this.emit("tick" as Event, { intensity: relativeIntensity });
+        const isAboveEntryThreshold: boolean = (relativeIntensity >= this.options.threshold);
+        const isAboveExitThreshold: boolean = (this.decayedIntensity > CONSTRAINTS.exitThreshold);
 
-            return;
-        }
-
-        if(isAboveThreshold) {
-            this.idleInTransitionTicks = 0;
+        if(isAboveEntryThreshold && this.currentState !== "transition") {
             this.currentState = "transition";
-        } else {
-            this.idleInTransitionTicks++;
+            this.emit(this.currentState, { intensity: relativeIntensity });
 
-            if(this.idleInTransitionTicks < this.options.quiescenceTicks) return;
-
+        } else if(!isAboveExitThreshold && this.currentState !== "idle") {
             this.currentState = "idle";
             this.mutationEvents = [];
+            this.decayedIntensity = 0;
             this.hasStaleDOMMeasures = true;
-        }
+            this.emit(this.currentState, { intensity: relativeIntensity });
 
-        this.emit(this.currentState, {
-            intensity: relativeIntensity
-        });
+        } else {
+            this.emitOnTick && this.emit("tick" as Event, { intensity: relativeIntensity });
+        }
     }
 
     public observe(): this {
