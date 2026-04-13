@@ -30,19 +30,14 @@
 
   // src/DOMQuake.ts
   var CONSTRAINTS = {
-    htmlDelta: {
-      maxDepthForSampling: 4,
-      maxHTMLLength: 5e4,
-      significantInjectionChars: 1e3
-    },
+    maxHTMLDeltaDepthForSampling: 4,
+    maxHTMLDeltaLength: 5e4,
     maxDOMMeasureDepth: 32
   };
-  var WEIGHTS = {
-    mutationTypeFactors: {
-      childList: 1,
-      attributes: 0.4,
-      characterData: 0.1
-    }
+  var MUTATION_WEIGHTS = {
+    childList: 1,
+    attributes: 0.4,
+    characterData: 0.1
   };
   var DEFAULT_OPTIONS = {
     quiescenceTicks: 3,
@@ -54,6 +49,7 @@
     options;
     emitOnTick;
     subtreeSizes;
+    nodeDOMDepths;
     currentState;
     domDepth;
     domIntensity;
@@ -79,6 +75,7 @@
       this.mutationObserver?.disconnect();
       clearInterval(this.tickInterval ?? void 0);
       this.subtreeSizes = /* @__PURE__ */ new WeakMap();
+      this.nodeDOMDepths = /* @__PURE__ */ new WeakMap();
       this.currentState = "transition";
       this.domDepth = 0;
       this.totalNodeCount = 0;
@@ -99,7 +96,7 @@
       return subtreeFraction * depthFactor;
     }
     computeHTMLDeltaFactor(record, depth) {
-      if (depth > CONSTRAINTS.htmlDelta.maxDepthForSampling) {
+      if (depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) {
         const nodeCount = record.addedNodes.length + record.removedNodes.length;
         return Math.log2(nodeCount + 1) + 1;
       }
@@ -107,26 +104,31 @@
         ...Array.from(record.addedNodes),
         ...Array.from(record.removedNodes)
       ];
-      const totalHtmlDelta = affectedNodes.reduce((sum, node) => {
+      const totalHTMLDelta = affectedNodes.reduce((sum, node) => {
         const html = node.outerHTML ?? node.textContent ?? "";
-        const htmlSize = Math.min(html.length, CONSTRAINTS.htmlDelta.maxHTMLLength);
+        const htmlSize = Math.min(html.length, CONSTRAINTS.maxHTMLDeltaLength);
         return sum + htmlSize;
       }, 0);
-      if (totalHtmlDelta >= CONSTRAINTS.htmlDelta.significantInjectionChars) {
-        this.hasStaleDOMMeasures = true;
+      return Math.log2(totalHTMLDelta + 1) + 1;
+    }
+    resolveTarget(node) {
+      let resolvedNode = node;
+      while (resolvedNode.nodeType === Node.COMMENT_NODE && resolvedNode.parentNode) {
+        resolvedNode = resolvedNode.parentNode;
       }
-      return Math.log2(totalHtmlDelta + 1) + 1;
+      return resolvedNode;
     }
     computeWeight(record) {
-      const typeFactor = WEIGHTS.mutationTypeFactors[record.type];
+      const typeFactor = MUTATION_WEIGHTS[record.type];
       if (typeFactor === void 0) return 0;
-      const depth = this.measureNodeDepth(record.target);
-      const structuralFactor = this.computeStructuralFactor(record.target, depth);
+      const target = this.resolveTarget(record.target);
+      const depth = this.nodeDOMDepths.get(target) ?? this.measureNodeDepth(target);
+      const structuralFactor = this.computeStructuralFactor(target, depth);
       if (structuralFactor === 0) return 0;
       const sizeFactor = this.computeHTMLDeltaFactor(record, depth);
       return structuralFactor * sizeFactor * typeFactor;
     }
-    computeWindowSum(tNow) {
+    pruneStaleEvents(tNow) {
       const cutoff = tNow - this.options.windowTicks * this.options.tickMs;
       let i = 0;
       while (i < this.mutationEvents.length && this.mutationEvents[i].timestamp < cutoff) {
@@ -135,6 +137,8 @@
       if (i > 0) {
         this.mutationEvents = this.mutationEvents.slice(i);
       }
+    }
+    computeWindowSum() {
       return this.mutationEvents.reduce((sum, event) => sum + event.weight, 0);
     }
     measureNodeDepth(node) {
@@ -149,6 +153,12 @@
     measureDOM() {
       const nodes = [...this.options.root.querySelectorAll("*")];
       const sizes = /* @__PURE__ */ new WeakMap();
+      const depths = /* @__PURE__ */ new WeakMap();
+      depths.set(this.options.root, 0);
+      for (const node of nodes) {
+        const parentDepth = depths.get(node.parentNode) ?? 0;
+        depths.set(node, parentDepth + 1);
+      }
       for (const node of nodes.reverse()) {
         let size = node.children.length;
         for (const child of node.children) {
@@ -157,50 +167,51 @@
         sizes.set(node, size);
       }
       this.domDepth = 0;
+      this.nodeDOMDepths = /* @__PURE__ */ new WeakMap();
       for (const node of nodes) {
+        const depth = depths.get(node) ?? 0;
         this.subtreeSizes.set(node, sizes.get(node) ?? 1);
-        this.domDepth = Math.max(this.domDepth, this.measureNodeDepth(node));
+        this.nodeDOMDepths.set(node, depth);
+        this.domDepth = Math.max(this.domDepth, depth);
       }
       this.totalNodeCount = nodes.length;
       this.domIntensity = nodes.reduce((sum, node) => {
-        const depth = this.measureNodeDepth(node);
+        const depth = depths.get(node) ?? 0;
         return sum + this.computeStructuralFactor(node, depth);
       }, 0);
     }
     flushPendingRecords() {
       if (this.pendingMutationRecords.length === 0) return;
+      const snapshot = this.pendingMutationRecords;
+      this.pendingMutationRecords = [];
       if (this.hasStaleDOMMeasures) {
-        const snapshot = this.pendingMutationRecords;
-        this.pendingMutationRecords = [];
         this.measureDOM();
-        this.pendingMutationRecords = snapshot;
         this.hasStaleDOMMeasures = false;
       }
       const tNow = performance.now();
-      for (const record of this.pendingMutationRecords) {
+      for (const record of snapshot) {
         const weight = this.computeWeight(record);
         if (weight === 0) continue;
-        const existingIndex = this.mutationEvents.findIndex((e) => e.target === record.target);
+        const target = this.resolveTarget(record.target);
+        const existingIndex = this.mutationEvents.findIndex((e) => e.target === target);
         if (existingIndex >= 0) {
-          this.mutationEvents[existingIndex].weight = Math.max(
-            this.mutationEvents[existingIndex].weight,
-            weight
-          );
+          const existing = this.mutationEvents[existingIndex];
+          existing.weight = Math.max(existing.weight, weight);
         } else {
           this.mutationEvents.push({
-            target: record.target,
+            target,
             timestamp: tNow,
             weight
           });
         }
       }
-      this.pendingMutationRecords = [];
     }
     tick() {
       this.flushPendingRecords();
       const now = performance.now();
-      const intensity = this.computeWindowSum(now);
-      const relativeIntensity = intensity / (this.domIntensity ?? 1);
+      this.pruneStaleEvents(now);
+      const intensity = this.computeWindowSum();
+      const relativeIntensity = intensity / (this.domIntensity || 1);
       const isAboveThreshold = relativeIntensity >= this.options.threshold;
       if (isAboveThreshold && this.currentState === "transition" || !isAboveThreshold && this.currentState === "idle") {
         this.emitOnTick && this.emit("tick", { intensity: relativeIntensity });
@@ -224,6 +235,7 @@
       this.measureDOM();
       this.mutationObserver = new MutationObserver((records) => {
         this.pendingMutationRecords.push(...records);
+        this.hasStaleDOMMeasures = true;
       });
       this.mutationObserver.observe(this.options.root, {
         childList: true,
@@ -236,6 +248,7 @@
       return this;
     }
     disconnect() {
+      if (!this.mutationObserver) return this;
       this.reset();
       return this;
     }

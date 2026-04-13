@@ -52,23 +52,20 @@
                 <div id="widget"></div>
             </div>
         </section>
-        <section>
-            <h2>Lorem Ipsum</h2>
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-        </section>
-        <section>
-            <h2>Lorem Ipsum</h2>
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-        </section>
-        <section>
-            <h2>Lorem Ipsum</h2>
-            <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-        </section>
+        <template id="section-template">
+            <section>
+                <h2>Lorem Ipsum</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            </section>
+        </template>
+        <script>
+            for(let i = 0; i < 7; i++) {
+                const clone = document.getElementById("section-template")
+                    .content
+                    .cloneNode(true);
+
+                document.body.appendChild(clone);
+            }
+        </script>
     </body>
 </html>

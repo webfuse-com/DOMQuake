@@ -24,29 +24,23 @@ interface MutationEvent {
 
 
 const CONSTRAINTS: {
-    htmlDelta: {
-        maxDepthForSampling: number;
-        maxHTMLLength: number;
-        significantInjectionChars: number
-    };
+    maxHTMLDeltaDepthForSampling: number;
+    maxHTMLDeltaLength: number;
     maxDOMMeasureDepth: number;
 } = {
-    htmlDelta: {
-        maxDepthForSampling: 4,
-        maxHTMLLength: 50000,
-        significantInjectionChars: 1000
-    },
+    maxHTMLDeltaDepthForSampling: 4,
+    maxHTMLDeltaLength: 50000,
     maxDOMMeasureDepth: 32
 };
 
-const WEIGHTS: {
-    mutationTypeFactors: Record<MutationType, number>
+const MUTATION_WEIGHTS: {
+    childList: number;
+    attributes: number;
+    characterData: number;
 } = {
-    mutationTypeFactors: {
-        childList: 1.0,
-        attributes: 0.4,
-        characterData: 0.1
-    }
+    childList: 1.0,
+    attributes: 0.4,
+    characterData: 0.1
 };
 
 const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
@@ -62,6 +56,7 @@ export class DOMQuake extends EventEmitter<Event> {
     private readonly emitOnTick: boolean;
 
     private subtreeSizes!: WeakMap<Node, number>;
+    private nodeDOMDepths!: WeakMap<Node, number>;
     private currentState!: Event;
     private domDepth!: number;
     private domIntensity!: number | null;
@@ -96,6 +91,7 @@ export class DOMQuake extends EventEmitter<Event> {
         clearInterval(this.tickInterval ?? undefined);
 
         this.subtreeSizes = new WeakMap();
+        this.nodeDOMDepths = new WeakMap();
         this.currentState = "transition";
         this.domDepth = 0;
         this.totalNodeCount = 0;
@@ -121,7 +117,7 @@ export class DOMQuake extends EventEmitter<Event> {
     }
 
     private computeHTMLDeltaFactor(record: MutationRecord, depth: number): number {
-        if(depth > CONSTRAINTS.htmlDelta.maxDepthForSampling) {
+        if(depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) {
             const nodeCount: number = record.addedNodes.length + record.removedNodes.length;
 
             return Math.log2(nodeCount + 1) + 1;
@@ -132,28 +128,36 @@ export class DOMQuake extends EventEmitter<Event> {
             ...Array.from(record.removedNodes)
         ];
 
-        const totalHtmlDelta: number = affectedNodes
+        const totalHTMLDelta: number = affectedNodes
             .reduce((sum: number, node: Node) => {
                 const html: string = (node as Element).outerHTML ?? node.textContent ?? "";
-                const htmlSize: number = Math.min(html.length, CONSTRAINTS.htmlDelta.maxHTMLLength);
+                const htmlSize: number = Math.min(html.length, CONSTRAINTS.maxHTMLDeltaLength);
 
                 return sum + htmlSize;
             }, 0);
 
-        if(totalHtmlDelta >= CONSTRAINTS.htmlDelta.significantInjectionChars) {
-            this.hasStaleDOMMeasures = true;
+        return Math.log2(totalHTMLDelta + 1) + 1;
+    }
+
+    private resolveTarget(node: Node): Node {
+        // Comment nodes are commonly used as anchors by frameworks
+        let resolvedNode: Node = node;
+
+        while(resolvedNode.nodeType === Node.COMMENT_NODE && resolvedNode.parentNode) {
+            resolvedNode = resolvedNode.parentNode;
         }
 
-        return Math.log2(totalHtmlDelta + 1) + 1;
+        return resolvedNode;
     }
 
     private computeWeight(record: MutationRecord): number {
-        const typeFactor: number | undefined = WEIGHTS.mutationTypeFactors[record.type as MutationType];
+        const typeFactor: number | undefined = MUTATION_WEIGHTS[record.type as MutationType];
 
         if(typeFactor === undefined) return 0;
 
-        const depth: number = this.measureNodeDepth(record.target);
-        const structuralFactor: number = this.computeStructuralFactor(record.target, depth);
+        const target: Node = this.resolveTarget(record.target);
+        const depth: number = this.nodeDOMDepths.get(target) ?? this.measureNodeDepth(target);
+        const structuralFactor: number = this.computeStructuralFactor(target, depth);
 
         if(structuralFactor === 0) return 0;
 
@@ -162,7 +166,7 @@ export class DOMQuake extends EventEmitter<Event> {
         return structuralFactor * sizeFactor * typeFactor;
     }
 
-    private computeWindowSum(tNow: number): number {
+    private pruneStaleEvents(tNow: number): void {
         const cutoff: number = tNow - (this.options.windowTicks * this.options.tickMs);
 
         let i: number = 0;
@@ -174,7 +178,9 @@ export class DOMQuake extends EventEmitter<Event> {
         if(i > 0) {
             this.mutationEvents = this.mutationEvents.slice(i);
         }
+    }
 
+    private computeWindowSum(): number {
         return this.mutationEvents
             .reduce((sum: number, event: MutationEvent) => sum + event.weight, 0);
     }
@@ -195,6 +201,14 @@ export class DOMQuake extends EventEmitter<Event> {
     private measureDOM() {
         const nodes: Element[] = [ ...this.options.root.querySelectorAll("*") ];
         const sizes: WeakMap<Node, number> = new WeakMap();
+        const depths: WeakMap<Node, number> = new WeakMap();
+
+        depths.set(this.options.root, 0);
+
+        for(const node of nodes) {
+            const parentDepth: number = depths.get(node.parentNode!) ?? 0;
+            depths.set(node, parentDepth + 1);
+        }
 
         for(const node of nodes.reverse()) {
             let size: number = node.children.length;
@@ -207,15 +221,19 @@ export class DOMQuake extends EventEmitter<Event> {
         }
 
         this.domDepth = 0;
+        this.nodeDOMDepths = new WeakMap();
 
         for(const node of nodes) {
+            const depth: number = depths.get(node) ?? 0;
+
             this.subtreeSizes.set(node, sizes.get(node) ?? 1);
-            this.domDepth = Math.max(this.domDepth, this.measureNodeDepth(node));
+            this.nodeDOMDepths.set(node, depth);
+            this.domDepth = Math.max(this.domDepth, depth);
         }
 
         this.totalNodeCount = nodes.length;
         this.domIntensity = nodes.reduce((sum: number, node: Element) => {
-            const depth: number = this.measureNodeDepth(node);
+            const depth: number = depths.get(node) ?? 0;
 
             return sum + this.computeStructuralFactor(node, depth);
         }, 0);
@@ -224,50 +242,50 @@ export class DOMQuake extends EventEmitter<Event> {
     private flushPendingRecords(): void {
         if(this.pendingMutationRecords.length === 0) return;
 
+        const snapshot: MutationRecord[] = this.pendingMutationRecords;
+
+        this.pendingMutationRecords = [];
+
         if(this.hasStaleDOMMeasures) {
-            const snapshot: MutationRecord[] = this.pendingMutationRecords;
-
-            this.pendingMutationRecords = [];
-
             this.measureDOM();
-
-            this.pendingMutationRecords = snapshot;
             this.hasStaleDOMMeasures = false;
         }
 
         const tNow: number = performance.now();
 
-        for(const record of this.pendingMutationRecords) {
+        for(const record of snapshot) {
             const weight: number = this.computeWeight(record);
 
             if(weight === 0) continue;
 
+            const target: Node = this.resolveTarget(record.target);
+
             const existingIndex: number = this.mutationEvents
-                .findIndex(e => e.target === record.target);
+                .findIndex(e => e.target === target);
 
             if(existingIndex >= 0) {
-                this.mutationEvents[existingIndex].weight = Math.max(
-                    this.mutationEvents[existingIndex].weight,
-                    weight
-                );
+                const existing: MutationEvent = this.mutationEvents[existingIndex];
+
+                existing.weight = Math.max(existing.weight, weight);
             } else {
                 this.mutationEvents.push({
-                    target: record.target,
+                    target,
                     timestamp: tNow,
                     weight
                 });
             }
         }
-
-        this.pendingMutationRecords = [];
     }
 
     private tick() {
         this.flushPendingRecords();
 
         const now: number = performance.now();
-        const intensity: number = this.computeWindowSum(now);
-        const relativeIntensity: number = intensity / (this.domIntensity ?? 1);
+
+        this.pruneStaleEvents(now);
+
+        const intensity: number = this.computeWindowSum();
+        const relativeIntensity: number = intensity / (this.domIntensity || 1);
 
         const isAboveThreshold: boolean = (relativeIntensity >= this.options.threshold);
 
@@ -275,7 +293,7 @@ export class DOMQuake extends EventEmitter<Event> {
             (isAboveThreshold && this.currentState === "transition") ||
             (!isAboveThreshold && this.currentState === "idle")
         ) {
-            this.emitOnTick && this.emit("tick", { intensity: relativeIntensity });
+            this.emitOnTick && this.emit("tick" as Event, { intensity: relativeIntensity });
 
             return;
         }
@@ -303,6 +321,7 @@ export class DOMQuake extends EventEmitter<Event> {
 
         this.mutationObserver = new MutationObserver((records: MutationRecord[]) => {
             this.pendingMutationRecords.push(...records);
+            this.hasStaleDOMMeasures = true;
         });
 
         this.mutationObserver
@@ -321,6 +340,8 @@ export class DOMQuake extends EventEmitter<Event> {
     }
 
     public disconnect(): this {
+        if(!this.mutationObserver) return this;
+
         this.reset();
 
         return this;

@@ -235,7 +235,6 @@ class TimelineChart {
 
     endRegime() {
         if(!this.#activeRegime) return false;
-        console.log(999)
 
         this.#activeRegime.end = this.#bars.length - 1;
         this.#activeRegime = null;
