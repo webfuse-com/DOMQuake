@@ -15,36 +15,36 @@ const KEEPALIVE = ARGUMENTS.includes("--keepalive");
 const APPS = [
     {
         test: "app.static",
-        expectedEventChain: [ "idle" ],
+        expectedEventChain: [ "stable" ],
         extraWait: 100,
     },
     {
         test: "app.dynamic.harmonic.minor",
-        expectedEventChain: [ "idle" ],
+        expectedEventChain: [ "stable" ],
         extraWait: 1000,
     },
     {
         test: "app.dynamic.harmonic.minor.acc",
-        expectedEventChain: [ "idle" ],
+        expectedEventChain: [ "stable" ],
         extraWait: 3500,
     },
     {
         test: "app.dynamic.harmonic.major",
-        expectedEventChain: [ "idle", "transition", "idle", "transition", "idle", "transition" ]
+        expectedEventChain: [ "stable", "transition", "stable", "transition", "stable", "transition" ]
     },
     {
         test: "app.dynamic.hydrated.minor",
-        expectedEventChain: [ "idle" ],
+        expectedEventChain: [ "stable" ],
         extraWait: 3500
     },
     {
         test: "app.dynamic.hydrated.major",
-        expectedEventChain: [ "idle", "transition", "idle", "transition", "idle" ],
+        expectedEventChain: [ "stable", "transition", "stable", "transition", "stable" ],
         extraWait: 1000
     },
     {
         test: "app.dynamic.hydrated.major-minor",
-        expectedEventChain: [ "idle" ],
+        expectedEventChain: [ "stable" ],
         extraWait: 3500
     }
 ];
@@ -132,9 +132,9 @@ for(const reference of FILTERED_APPS) {
     const returnValue = await runBrowser(
         `file://${join(import.meta.dirname, reference.test.replace(/(\.html)?$/i, ".html"))}`,
         async reference => {
-            const EVENTS = [ "transition", "idle" ];
+            const EVENTS = [ "transition", "stable" ];
             const TIMEOUT_MS = 3500;
-            const IDLE_EPSILON_MS = 500;
+            const STABLE_EPSILON_MS = 500;
             const TRANSITION_EPSILON_MS = 100;
             const INIT_DELAY_MS = 500;
 
@@ -228,7 +228,7 @@ for(const reference of FILTERED_APPS) {
 
                 console.log("Δ", `${timestampDifference >= 0 ? "+" : "-"}${timestampDelta}`);
 
-                let epsilon = (event === "idle" ? IDLE_EPSILON_MS : TRANSITION_EPSILON_MS);
+                let epsilon = (event === "stable" ? STABLE_EPSILON_MS : TRANSITION_EPSILON_MS);
                 epsilon += (i ? 0 : INIT_DELAY_MS);
 
                 if(timestampDelta <= epsilon) continue;

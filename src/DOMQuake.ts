@@ -301,8 +301,8 @@ export class DOMQuake extends EventEmitter<Event> {
             this.currentState = "transition";
             this.emit(this.currentState, { intensity: relativeIntensity });
 
-        } else if(!isAboveExitThreshold && this.currentState !== "idle") {
-            this.currentState = "idle";
+        } else if(!isAboveExitThreshold && this.currentState !== "stable") {
+            this.currentState = "stable";
             this.mutationEvents = [];
             this.decayedIntensity = 0;
             this.hasStaleDOMMeasures = true;

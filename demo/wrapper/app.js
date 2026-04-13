@@ -33,7 +33,7 @@ class TimelineChart {
             if(event.data.data.id != this.#id) return;
 
             (data.event === "transition") && this.startRegime();
-            (data.event === "idle") && this.endRegime();
+            (data.event === "stable") && this.endRegime();
 
             this.addBar(data.detail.intensity);
         });

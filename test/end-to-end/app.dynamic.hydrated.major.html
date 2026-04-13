@@ -64,10 +64,10 @@
 
                     await Promise.all(hydrations);
 
-                    window.__signalEvent("idle");
+                    window.__signalEvent("stable");
                 }
 
-                window.__signalEvent("idle");
+                window.__signalEvent("stable");
 
                 hydrate(true);
 

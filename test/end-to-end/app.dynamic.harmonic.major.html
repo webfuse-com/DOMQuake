@@ -36,7 +36,7 @@
 
                 let index = 0;
 
-                window.__signalEvent("idle");
+                window.__signalEvent("stable");
 
                 window.__signalEvent("transition");
                 
@@ -44,7 +44,7 @@
                     slider.appendChild(createItem(index++));
                 }
 
-                window.__signalEvent("idle");
+                window.__signalEvent("stable");
 
                 setInterval(() => {
                     window.__signalEvent("transition");
@@ -52,7 +52,7 @@
                     slider.removeChild(slider.firstElementChild);
                     slider.appendChild(createItem(index++));
 
-                    window.__signalEvent("idle");
+                    window.__signalEvent("stable");
                 }, 2000);
             });
         </script>

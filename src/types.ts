@@ -1,6 +1,6 @@
 export type Event =
     | "tick"
-    | "idle"
+    | "stable"
     | "transition";
 
 export interface EventArgument {

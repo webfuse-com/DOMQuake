@@ -5,7 +5,7 @@ Observe UI state on any web page.
 ``` js
 new DOMQuake()
   .on("transition", pauseAgentCalls)
-  .on("idle", resumeAgentCalls)
+  .on("stable", resumeAgentCalls)
   .observe();
 
 new DOMQuake({
