@@ -299,22 +299,27 @@ export class DOMQuake extends EventEmitter<Event> {
 
         if(isAboveEntryThreshold && this.currentState !== "transition") {
             this.currentState = "transition";
+
             this.emit(this.currentState, { intensity: relativeIntensity });
 
         } else if(!isAboveExitThreshold && this.currentState !== "stable") {
             this.currentState = "stable";
             this.mutationEvents = [];
+            this.pendingMutationRecords = [];
             this.decayedIntensity = 0;
             this.hasStaleDOMMeasures = true;
+
             this.emit(this.currentState, { intensity: relativeIntensity });
 
-        } else {
-            this.emitOnTick && this.emit("tick" as Event, { intensity: relativeIntensity });
+        } else if(this.emitOnTick) {
+            this.emit("tick" as Event, { intensity: relativeIntensity });
         }
     }
 
     public observe(): this {
         this.measureDOM();
+
+        this.decayedIntensity = 1.0;
 
         this.mutationObserver = new MutationObserver((records: MutationRecord[]) => {
             this.pendingMutationRecords.push(...records);

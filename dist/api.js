@@ -227,15 +227,17 @@
       } else if (!isAboveExitThreshold && this.currentState !== "stable") {
         this.currentState = "stable";
         this.mutationEvents = [];
+        this.pendingMutationRecords = [];
         this.decayedIntensity = 0;
         this.hasStaleDOMMeasures = true;
         this.emit(this.currentState, { intensity: relativeIntensity });
-      } else {
-        this.emitOnTick && this.emit("tick", { intensity: relativeIntensity });
+      } else if (this.emitOnTick) {
+        this.emit("tick", { intensity: relativeIntensity });
       }
     }
     observe() {
       this.measureDOM();
+      this.decayedIntensity = 1;
       this.mutationObserver = new MutationObserver((records) => {
         this.pendingMutationRecords.push(...records);
         this.hasStaleDOMMeasures = true;
