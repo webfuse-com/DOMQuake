@@ -61,7 +61,7 @@ const FILTERED_APPS = (() => {
 })();
 
 
-async function runBrowser(url, inPageCallback, inPageCallbackArgs, options = {}) {
+async function runBrowser(url, inPageCallback, inPageCallbackArgs = [], options = {}) {
     const optionsWithDefaults = {
         headless: true,
         keepalive: false,

@@ -1,11 +1,10 @@
 window.addEventListener("message", event => {
-    if(event.data.type !== "observe") return;
+    if(event.data?.type !== "observe") return;
 
-    observe(event.data.data.id, event.data.data.threshold);
-});
+    const data = event.data.data;
+    const id = data.id;
+    const threshold = data.threshold;
 
-
-function observe(id, threshold = 0.5) {
     new DOMQuake({
         threshold
     }, true)
@@ -22,10 +21,4 @@ function observe(id, threshold = 0.5) {
             console.log(`[threshold=${threshold}]`, event, detail);
         })
         .observe();
-}
-
-
-
-/* 
-observe(0.5);
-observe(0.0175); */
+});

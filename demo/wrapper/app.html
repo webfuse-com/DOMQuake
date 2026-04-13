@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="./app.css">
         <script src="./app.js"></script>
         <script>
-            const IFRAME_SRC = "../target/app.html";
+            const FRAME_SRC = "../target/app.html";
 
             document.addEventListener("DOMContentLoaded", () => {
                 document.querySelector("iframe").setAttribute("src", "");
@@ -16,14 +16,14 @@
             });
 
             window.start = function(threshold) {
-                document.querySelector("iframe").setAttribute("src", IFRAME_SRC);
+                document.querySelector("iframe").setAttribute("src", FRAME_SRC);
 
                 setTimeout(() => new TimelineChart(threshold), 100);
             };
             window.startForms = function(e) {
                 e.preventDefault();
 
-                document.querySelector("iframe").setAttribute("src", IFRAME_SRC)
+                document.querySelector("iframe").setAttribute("src", FRAME_SRC)
 
                 let threshold = document.querySelector("input[name='threshold']").value || "0.5";
                 threshold = parseFloat(threshold);

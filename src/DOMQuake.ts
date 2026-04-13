@@ -236,16 +236,11 @@ export class DOMQuake extends EventEmitter<Event> {
         }
 
         const tNow: number = performance.now();
-        const seenTargets: WeakSet<Node> = new WeakSet();
 
         for(const record of this.pendingMutationRecords) {
-            if(seenTargets.has(record.target)) continue;
-
             const weight: number = this.computeWeight(record);
 
             if(weight === 0) continue;
-
-            seenTargets.add(record.target);
 
             const existingIndex: number = this.mutationEvents
                 .findIndex(e => e.target === record.target);
