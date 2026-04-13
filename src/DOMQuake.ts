@@ -57,6 +57,7 @@ const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
 
 export class DOMQuake extends EventEmitter<Event> {
     private readonly options: DOMQuakeOptions;
+    private readonly emitOnTick: boolean;
 
     private subtreeSizes!: WeakMap<Node, number>;
     private currentState!: Event;
@@ -70,7 +71,7 @@ export class DOMQuake extends EventEmitter<Event> {
     private mutationObserver!: MutationObserver | null;
     private tickInterval!: ReturnType<typeof setInterval> | null;
 
-    constructor(options: Partial<DOMQuakeOptions> = {}) {
+    constructor(options: Partial<DOMQuakeOptions> = {}, emitOnTick: boolean = false) {
         super();
 
         const optionsWithDefaults: DOMQuakeOptions = {
@@ -82,6 +83,7 @@ export class DOMQuake extends EventEmitter<Event> {
         };
 
         this.options = optionsWithDefaults;
+        this.emitOnTick = emitOnTick;
 
         this.reset();
     }
@@ -164,7 +166,7 @@ export class DOMQuake extends EventEmitter<Event> {
 
         let i: number = 0;
 
-        while(i < this.mutationEvents.length && this.mutationEvents[i].timestamp < cutoff) {
+        while((i < this.mutationEvents.length) && (this.mutationEvents[i].timestamp < cutoff)) {
             i++;
         }
 
@@ -251,22 +253,31 @@ export class DOMQuake extends EventEmitter<Event> {
     private tick() {
         this.flushPendingRecords();
 
-        const tNow: number = performance.now();
-        const intensity: number = this.computeWindowSum(tNow);
+        const now: number = performance.now();
+        const intensity: number = this.computeWindowSum(now);
         const relativeIntensity: number = intensity / (this.domIntensity ?? 1);
 
-        if(relativeIntensity >= this.options.threshold) {
-            if(this.currentState === "transition") return;
+        const isAboveThreshold: boolean = (relativeIntensity >= this.options.threshold);
 
+        if (
+            (isAboveThreshold && this.currentState === "transition") ||
+            (!isAboveThreshold && this.currentState === "idle")
+        ) {
+            this.emitOnTick
+                && this.emit("tick", {
+                    intensity: relativeIntensity
+                });
+
+            return;
+        }
+
+        if (isAboveThreshold) {
             this.idleInTransitionTicks = 0;
-
             this.currentState = "transition";
         } else {
-            if(this.currentState === "idle") return;
-
             this.idleInTransitionTicks++;
 
-            if(this.idleInTransitionTicks < this.options.quiescenceTicks) return;
+            if (this.idleInTransitionTicks < this.options.quiescenceTicks) return;
 
             this.currentState = "idle";
             this.mutationEvents = [];

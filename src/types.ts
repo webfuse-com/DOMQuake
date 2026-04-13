@@ -1,4 +1,5 @@
 export type Event =
+    | "tick"
     | "idle"
     | "transition";
 
