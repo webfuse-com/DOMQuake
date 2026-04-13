@@ -17,9 +17,11 @@ interface DOMQuakeOptions {
 }
 
 interface MutationEvent {
+    target: Node;
     timestamp: number;
     weight: number;
 }
+
 
 const CONSTRAINTS: {
     htmlDelta: {
@@ -151,7 +153,6 @@ export class DOMQuake extends EventEmitter<Event> {
         if(typeFactor === undefined) return 0;
 
         const depth: number = this.measureNodeDepth(record.target);
-
         const structuralFactor: number = this.computeStructuralFactor(record.target, depth);
 
         if(structuralFactor === 0) return 0;
@@ -235,16 +236,32 @@ export class DOMQuake extends EventEmitter<Event> {
         }
 
         const tNow: number = performance.now();
+        const seenTargets: WeakSet<Node> = new WeakSet();
 
         for(const record of this.pendingMutationRecords) {
+            if(seenTargets.has(record.target)) continue;
+
             const weight: number = this.computeWeight(record);
 
             if(weight === 0) continue;
 
-            this.mutationEvents.push({
-                timestamp: tNow,
-                weight
-            });
+            seenTargets.add(record.target);
+
+            const existingIndex: number = this.mutationEvents
+                .findIndex(e => e.target === record.target);
+
+            if(existingIndex >= 0) {
+                this.mutationEvents[existingIndex].weight = Math.max(
+                    this.mutationEvents[existingIndex].weight,
+                    weight
+                );
+            } else {
+                this.mutationEvents.push({
+                    target: record.target,
+                    timestamp: tNow,
+                    weight
+                });
+            }
         }
 
         this.pendingMutationRecords = [];
@@ -259,25 +276,22 @@ export class DOMQuake extends EventEmitter<Event> {
 
         const isAboveThreshold: boolean = (relativeIntensity >= this.options.threshold);
 
-        if (
+        if(
             (isAboveThreshold && this.currentState === "transition") ||
             (!isAboveThreshold && this.currentState === "idle")
         ) {
-            this.emitOnTick
-                && this.emit("tick", {
-                    intensity: relativeIntensity
-                });
+            this.emitOnTick && this.emit("tick", { intensity: relativeIntensity });
 
             return;
         }
 
-        if (isAboveThreshold) {
+        if(isAboveThreshold) {
             this.idleInTransitionTicks = 0;
             this.currentState = "transition";
         } else {
             this.idleInTransitionTicks++;
 
-            if (this.idleInTransitionTicks < this.options.quiescenceTicks) return;
+            if(this.idleInTransitionTicks < this.options.quiescenceTicks) return;
 
             this.currentState = "idle";
             this.mutationEvents = [];

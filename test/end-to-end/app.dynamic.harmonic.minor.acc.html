@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test</title>
+        <style>
+            #slider {
+                display: flex;
+                gap: 10px;
+                width: 320px;
+                overflow: hidden;
+            }
+            #slider > div {
+                width: 100px;
+                height: 100px;
+                background-color: coral;
+            }
+        </style>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const createItem = i => {
+                    const el = document.createElement("div");
+
+                    el.textContent = i;
+
+                    return el;
+                }
+
+                const slider = document.getElementById("slider");
+
+                let index = 0;
+
+                for(let i = 0; i < 3; i++) {
+                    slider.appendChild(createItem(index++));
+                }
+
+                const updateSlider = () => {
+                    slider.removeChild(slider.firstElementChild);
+                    slider.appendChild(createItem(index++));
+                };
+
+                setTimeout(() => {
+                    for(let i = 0; i < 10; i++) {
+                        updateSlider(); // Burst on same node (should not accumulate)
+                    }
+
+                    setInterval(updateSlider, 500);
+                }, 1500);
+            });
+
+            window.addEventListener("load", () => {
+                window.__signalEvent("idle");
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Test</h1>
+        <div id="slider"></div>
+        <template id="section-template">
+            <section>
+                <h2>Lorem Ipsum</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            </section>
+        </template>
+        <script>
+            for(let i = 0; i < 10; i++) {
+                const clone = document.getElementById("section-template")
+                    .content
+                    .cloneNode(true);
+
+                document.body.appendChild(clone);
+            }
+        </script>
+    </body>
+</html>

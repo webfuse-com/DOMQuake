@@ -24,6 +24,11 @@ const APPS = [
         extraWait: 1000,
     },
     {
+        test: "app.dynamic.harmonic.minor.acc",
+        expectedEventChain: [ "idle" ],
+        extraWait: 3500,
+    },
+    {
         test: "app.dynamic.harmonic.major",
         expectedEventChain: [ "idle", "transition", "idle", "transition", "idle", "transition" ]
     },
@@ -208,13 +213,13 @@ for(const reference of FILTERED_APPS) {
 
                 if(referenceEvent.event !== event) {
                     return {
-                        error: `Expected reference '${event}' at (${i}), got '${referenceEvent.event}'`
+                        error: `Expected reference event '${event}' at (${i}), got '${referenceEvent.event}'`
                     };
                 }
 
                 if(detectedEvent.event !== event) {
                     return {
-                        error: `Expected detected '${event}' at (${i}), got '${detectedEvent.event}'`
+                        error: `Expected detected event '${event}' at (${i}), got '${detectedEvent.event}'`
                     };
                 }
 
