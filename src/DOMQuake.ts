@@ -139,7 +139,7 @@ export class DOMQuake extends EventEmitter<Event> {
             }, 0);
 
         if(totalHtmlDelta >= CONSTRAINTS.htmlDelta.significantInjectionChars) {
-            this.measureDOM();
+            this.hasStaleDOMMeasures = true;
         }
 
         return Math.log2(totalHtmlDelta + 1) + 1;

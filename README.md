@@ -1,13 +1,19 @@
 # DOMQuake
 
-Observe web UI state on any web page.
+Observe UI state on any web page.
 
 ``` js
 new DOMQuake()
-  .on("transition", (event, detail) => pauseAgentCalls())
+  .on("transition", pauseAgentCalls)
+  .on("idle", resumeAgentCalls)
   .observe();
 
-new DOMQuake()
-  .on("idle", (event, detail) => resumeAgentCalls())
-    .observe();
+new DOMQuake({
+  root: document.querySelector("footer"),
+  threshold: 0.9  // (think of 90% UI change; default: 0.5)
+})
+  .once("transition", ({ intensity }) => {
+    console.log("Intensity": intensity)
+  })
+  .observe();
 ```

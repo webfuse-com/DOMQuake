@@ -9,8 +9,13 @@
         <script>
             const IFRAME_SRC = "../target/app.html";
 
+            document.addEventListener("DOMContentLoaded", () => {
+                document.querySelector("iframe").setAttribute("src", "");
+            }, {
+                once: true
+            });
+
             window.start = function(threshold) {
-                console.log(5543, threshold)
                 document.querySelector("iframe").setAttribute("src", IFRAME_SRC);
 
                 setTimeout(() => new TimelineChart(threshold), 100);
@@ -31,7 +36,7 @@
     <body>
         <template id="chart-template">
             <section class="chart">
-                <canvas height="128"></canvas>
+                <canvas height="160"></canvas>
             </section>
         </template>
         <header>
@@ -42,8 +47,8 @@
                     <button type="submit">Start</button>
                 </div>
                 <div>
-                    <button type="button" onclick="start(0.5)">0.5</button>
                     <button type="button" onclick="start(0.0175)">0.0175</button>
+                    <button type="button" onclick="start(0.5)">0.5</button>
                 </div>
             </form>
         </header>

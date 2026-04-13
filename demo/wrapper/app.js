@@ -9,10 +9,7 @@ class TimelineChart {
 
     static #barWidth = 6;
     static #barGap = 2;
-    static #paddingTop = 36;
-    static #paddingBottom = 24;
-    static #paddingLeft = 42;
-    static #paddingRight = 36;
+    static #padding = 36;
     static #yLabelDistance = 5;
 
     #bars = [];
@@ -66,10 +63,10 @@ class TimelineChart {
 
     #chartArea() {
         return {
-            x: TimelineChart.#paddingLeft,
-            y: TimelineChart.#paddingTop,
-            w: this.#canvas.width - TimelineChart.#paddingLeft - TimelineChart.#paddingRight,
-            h: this.#canvas.height - TimelineChart.#paddingTop - TimelineChart.#paddingBottom
+            x: TimelineChart.#padding,
+            y: TimelineChart.#padding,
+            w: this.#canvas.width - TimelineChart.#padding - TimelineChart.#padding,
+            h: this.#canvas.height - TimelineChart.#padding - TimelineChart.#padding
         };
     }
 
@@ -108,7 +105,7 @@ class TimelineChart {
 
     #drawRegimes(area) {
         const step = TimelineChart.#barWidth + TimelineChart.#barGap;
-        const offset = TimelineChart.#barGap;
+        const offset = TimelineChart.#barGap * 2;
 
         for(const regime of this.#regimes) {
             const x1 = area.x + regime.start * step - offset;
@@ -205,7 +202,7 @@ class TimelineChart {
             value, color
         });
 
-        const barsWidth = TimelineChart.#paddingLeft + TimelineChart.#paddingRight +
+        const barsWidth = TimelineChart.#padding + TimelineChart.#padding +
             this.#bars.length * (TimelineChart.#barWidth + TimelineChart.#barGap);
 
         const parent = this.#canvas.parentElement;
