@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DOMQuake Demo</title>
+        <link rel="stylesheet" href="./app.css">
+        <script src="./app.js"></script>
+    </head>
+    <body>
+        <canvas></canvas>
+        <script>
+            document.querySelector("canvas").setAttribute("height", window.innerHeight);
+
+            const THRESHOLD = parseFloat(new URLSearchParams(window.location.search).get("t"));
+
+            const timeline = new TimelineChart(THRESHOLD);
+
+            let hasInitialized = false;
+
+            window.addEventListener("message", message => {
+                if(message.data.type !== "dom-quake") return;
+
+                const data = message.data.data;
+
+                switch(data.event) {
+                    case "transition":
+                        timeline.startRegime();
+
+                        break;
+                    case "stable":
+                        timeline.endRegime();
+
+                        if(!hasInitialized) {
+                            timeline.addTimestamp("stable (0)");
+
+                            hasInitialized = true;
+                        }
+
+                        break;
+                }
+                (data.event != "tick") && console.log(data.event, data.detail);
+
+                timeline.addBar(data.detail.intensity);
+
+                console.debug(data.event, data.detail);
+            });
+        </script>
+    </body>
+</html>

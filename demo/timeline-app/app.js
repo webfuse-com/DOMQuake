@@ -4,16 +4,18 @@ class TimelineChart {
         threshold: "#DF686C",
         axisLine: "#E5E6E9",
         axisText: "#8C8D8F",
-        regime: "#FFEAEC"
+        regime: "#FFEAEC",
+        timestamp: "#E08A00"
     };
 
     static #barWidth = 6;
     static #barGap = 2;
-    static #padding = 36;
+    static #padding = 24;
     static #yLabelDistance = 5;
 
     #bars = [];
     #regimes = [];
+    #timestamps = [];
     #activeRegime = null;
     #threshold;
     #id;
@@ -38,22 +40,8 @@ class TimelineChart {
             this.addBar(data.detail.intensity);
         });
 
-        document.querySelector("iframe")
-            .contentWindow
-            .postMessage({
-                type: "observe",
-                data: {
-                    id: this.#id,
-                    threshold
-                }
-            }, "*");
-
-        const element = document.querySelector("#chart-template").content.cloneNode(true);
-
-        this.#canvas = element.querySelector("canvas");
+        this.#canvas = document.querySelector("canvas");
         this.#ctx = this.#canvas.getContext("2d");
-
-        document.querySelector("header").appendChild(element);
 
         this.#bars.push({
             value: 0
@@ -63,7 +51,7 @@ class TimelineChart {
 
     #chartArea() {
         return {
-            x: TimelineChart.#padding,
+            x: TimelineChart.#padding * 2,
             y: TimelineChart.#padding,
             w: this.#canvas.width - TimelineChart.#padding - TimelineChart.#padding,
             h: this.#canvas.height - TimelineChart.#padding - TimelineChart.#padding
@@ -90,19 +78,6 @@ class TimelineChart {
         return area.y + area.h - (value / maxVal) * area.h;
     }
 
-    #draw() {
-        const area = this.#chartArea();
-        const maxVal = this.#maxVal();
-
-        this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
-        this.#drawRegimes(area);
-        this.#drawGrid(area, maxVal);
-        this.#drawBars(area, maxVal);
-        this.#drawThreshold(area, maxVal);
-
-        this.#drawAxes(area, maxVal);
-    }
-
     #drawRegimes(area) {
         const step = TimelineChart.#barWidth + TimelineChart.#barGap;
         const offset = TimelineChart.#barGap * 2;
@@ -114,6 +89,26 @@ class TimelineChart {
 
             this.#ctx.fillStyle = TimelineChart.#color.regime;
             this.#ctx.fillRect(x1, area.y, x2 - x1, area.h);
+        }
+    }
+
+    #drawTimestamps(area) {
+        for(const t of this.#timestamps) {
+            const step = TimelineChart.#barWidth + TimelineChart.#barGap;
+            const x = area.x + t.value * step + TimelineChart.#barWidth / 2;
+
+            if(t.label) {
+                this.#ctx.fillStyle = TimelineChart.#color.timestamp;
+                this.#ctx.font = "11px sans-serif";
+                this.#ctx.textAlign = "left";
+                this.#ctx.fillText(t.label, x + 4, area.y + 12);
+            }
+
+            this.#ctx.strokeStyle = TimelineChart.#color.timestamp;
+            this.#ctx.beginPath();
+            this.#ctx.moveTo(x, area.y);
+            this.#ctx.lineTo(x, area.y + area.h);
+            this.#ctx.stroke();
         }
     }
 
@@ -197,16 +192,30 @@ class TimelineChart {
         this.#ctx.stroke();
     }
 
-    addBar(value, color = null) {
+    #draw() {
+        const area = this.#chartArea();
+        const maxVal = this.#maxVal();
+
+        this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
+        this.#drawRegimes(area);
+        this.#drawTimestamps(area);
+        this.#drawGrid(area, maxVal);
+        this.#drawBars(area, maxVal);
+        this.#drawThreshold(area, maxVal);
+
+        this.#drawAxes(area, maxVal);
+    }
+
+    addBar(value) {
         this.#bars.push({
-            value, color
+            value
         });
 
         const barsWidth = TimelineChart.#padding + TimelineChart.#padding +
             this.#bars.length * (TimelineChart.#barWidth + TimelineChart.#barGap);
 
         const parent = this.#canvas.parentElement;
-        const wasAtEnd = parent.scrollLeft + parent.clientWidth >= parent.scrollWidth - 1;
+        const wasAtEnd = (parent.scrollLeft + parent.clientWidth )>= (parent.scrollWidth - 1);
 
         if(barsWidth > this.#canvas.width) {
             this.#canvas.width = barsWidth;
@@ -214,9 +223,9 @@ class TimelineChart {
 
         this.#draw();
 
-        if(wasAtEnd) {
-            parent.scrollLeft = parent.scrollWidth;
-        }
+        if(!wasAtEnd) return;
+
+        parent.scrollLeft = parent.scrollWidth;
     }
 
     startRegime() {
@@ -228,6 +237,7 @@ class TimelineChart {
         };
 
         this.#regimes.push(this.#activeRegime);
+
         this.#draw();
 
         return true;
@@ -238,8 +248,18 @@ class TimelineChart {
 
         this.#activeRegime.end = this.#bars.length - 1;
         this.#activeRegime = null;
+
         this.#draw();
 
         return true;
+    }
+
+    addTimestamp(label) {
+        this.#timestamps.push({
+            value: this.#bars.length,
+            label
+        });
+
+        this.#draw();
     }
 }

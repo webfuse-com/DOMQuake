@@ -6,12 +6,12 @@
   "main": "./dist/api.js",
   "scripts": {
     "prepare": "husky",
-    "build": "npx esbuild ./src/api.ts --bundle --outfile=./dist/api.js",
+    "build": "npx esbuild ./src/api.ts --bundle --outfile=./dist/DOMQuake.js",
     "build:watch": "npm run build:api -- --watch",
     "test:unit": "node --experimental-strip-types ./test/unit/test.js",
     "test:end-to-end": "node ./test/end-to-end/test.js",
     "test": "npm run test:unit && npm run test:end-to-end",
-    "demo": "/usr/bin/firefox ./demo/wrapper/app.html"
+    "demo": "node ./demo/demo.js"
   },
   "repository": {
     "type": "git",

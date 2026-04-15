@@ -17,3 +17,24 @@ new DOMQuake({
   })
   .observe();
 ```
+
+### Integrate
+
+``` html
+<script src="https://cdn.jsdelivr.net/gh/webfuse-com/DOMQuake@main/dist/DOMQuake.js"></script>
+```
+
+### Run Demo
+
+``` console
+npm run demo -- [<URL> [<THRESHOLD>]]
+```
+
+```
+npm run demo
+npm run demo -- https://www.webfuse.com 0.7
+```
+
+### A 2-State Machine & Event Emitter
+
+**DOMQuake** is a framework-agnostic web application state machine. It works in any web application – whether static or hydrated. The state machine transitions between `stable` and `transition` state based on whether a continuously sampled DOM mutation intensity surpasses a defined threshold. Intensity, at that, is a score that reflects the structural significance of a sliding window of mutations. It applies an adaptive decay model to distinguish UI page transitions from noise (e.g., a slider). The state machine is exposed through an event emitter interface.

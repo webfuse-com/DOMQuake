@@ -6,7 +6,7 @@ import puppeteer from "puppeteer";
 
 const INTEGRATION_MODULE_PATHS = [
     "./app.js",
-    "../../dist/api.js"
+    "../../dist/DOMQuake.js"
 ];
 
 const ARGUMENTS = process.argv.slice(2);
@@ -65,7 +65,7 @@ async function runBrowser(url, inPageCallback, inPageCallbackArgs = [], options 
     const optionsWithDefaults = {
         headless: true,
         keepalive: false,
-        viewport: [ 1500, 900 ],
+        viewport: [ 1300, 975 ],
 
         ...options
     };

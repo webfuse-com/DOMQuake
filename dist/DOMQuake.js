@@ -43,7 +43,7 @@
     characterData: 0.1
   };
   var DEFAULT_OPTIONS = {
-    threshold: 0.5,
+    threshold: 0.7,
     tickMs: 50,
     windowTicks: 6
   };
