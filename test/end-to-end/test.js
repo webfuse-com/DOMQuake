@@ -24,7 +24,7 @@ const APPS = [
         extraWait: 1000,
     },
     {
-        test: "app.dynamic.harmonic.minor.acc",
+        test: "app.dynamic.harmonic.minor.accumulated",
         expectedEventChain: [ "stable" ],
         extraWait: 3500,
     },
@@ -41,6 +41,11 @@ const APPS = [
         test: "app.dynamic.hydrated.major",
         expectedEventChain: [ "stable", "transition", "stable", "transition", "stable" ],
         extraWait: 1000
+    },
+    {
+        test: "app.dynamic.hydrated.major.ignored",
+        expectedEventChain: [ "stable" ],
+        extraWait: 3500
     },
     {
         test: "app.dynamic.hydrated.major-minor",

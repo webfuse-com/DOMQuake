@@ -28,13 +28,15 @@ const CONSTRAINTS: {
     maxDOMMeasureDepth: number;
     maxHTMLDeltaDepthForSampling: number;
     maxHTMLDeltaLength: number;
+    skipTagNames: string[];
 } = {
     exitThreshold: 0.02,
     intensityDecayFactor: 0.25,
     maxDecayRampTicks: 40,
     maxDOMMeasureDepth: 32,
     maxHTMLDeltaDepthForSampling: 4,
-    maxHTMLDeltaLength: 50000
+    maxHTMLDeltaLength: 50000,
+    skipTagNames: [ "SCRIPT", "NOSCRIPT", "TEMPLATE", "META" ]
 };
 
 const MUTATION_WEIGHTS: {
@@ -48,7 +50,7 @@ const MUTATION_WEIGHTS: {
 };
 
 const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
-    threshold: 0.5,
+    threshold: 0.7,
     tickMs: 50,
     windowTicks: 6
 };
@@ -109,6 +111,16 @@ export class DOMQuake extends EventEmitter<Event> {
         this.transitionTicks = CONSTRAINTS.maxDecayRampTicks;
     }
 
+    private resolveTarget(node: Node): Node {
+        let resolvedNode: Node = node;
+
+        while(resolvedNode.nodeType !== Node.ELEMENT_NODE && resolvedNode.parentNode) {
+            resolvedNode = resolvedNode.parentNode;
+        }
+
+        return resolvedNode;
+    }
+
     private computeStructuralFactor(node: Node, depth: number): number {
         const subtreeSize: number | undefined = this.subtreeSizes.get(node);
 
@@ -121,12 +133,21 @@ export class DOMQuake extends EventEmitter<Event> {
         return subtreeFraction * depthFactor;
     }
 
-    private computeHTMLDeltaFactor(record: MutationRecord, depth: number): number {
-        if(depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) {
-            const nodeCount: number = record.addedNodes.length + record.removedNodes.length;
+    private filterSkippedNodes(nodes: NodeList | Node[]): Node[] {
+        return [ ...nodes ]
+            .filter(node => {
+                return (node.nodeType === Node.ELEMENT_NODE)
+                    && !CONSTRAINTS.skipTagNames.includes((node as Element).tagName.toUpperCase());
+            });
+    }
 
-            return Math.log2(nodeCount + 1) + 1;
-        }
+    private computeHTMLDeltaFactor(record: MutationRecord, depth: number): number {
+        const effectiveNodes: Node[] = [
+            ...this.filterSkippedNodes(record.addedNodes),
+            ...this.filterSkippedNodes(record.removedNodes)
+        ];
+
+        if(depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) return Math.log2(effectiveNodes.length + 1) + 1;
 
         const affectedNodes: Node[] = [
             ...Array.from(record.addedNodes),
@@ -144,22 +165,15 @@ export class DOMQuake extends EventEmitter<Event> {
         return Math.log2(totalHTMLDelta + 1) + 1;
     }
 
-    private resolveTarget(node: Node): Node {
-        let resolvedNode: Node = node;
-
-        while(resolvedNode.nodeType !== Node.ELEMENT_NODE && resolvedNode.parentNode) {
-            resolvedNode = resolvedNode.parentNode;
-        }
-
-        return resolvedNode;
-    }
-
     private computeWeight(record: MutationRecord): number {
         const typeFactor: number | undefined = MUTATION_WEIGHTS[record.type as MutationType];
 
         if(typeFactor === undefined) return 0;
 
         const target: Node = this.resolveTarget(record.target);
+
+        if(!this.filterSkippedNodes([ target ]).length) return 0;
+
         const depth: number = this.nodeDOMDepths.get(target) ?? this.measureNodeDepth(target);
         const structuralFactor: number = this.computeStructuralFactor(target, depth);
 

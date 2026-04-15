@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test</title>
+        <style>
+            section {
+                opacity: 0;
+                transition: opacity 500ms;
+            }
+            section.visible {
+                opacity: 1;
+            }
+        </style>
+        <script>
+            window.addEventListener("load", () => {
+                const appEl = document.getElementById("app");
+
+                const hydrateComponent = async (i, throttleMs = 0) => {
+                    const html = "var foo = 'bar';\n".repeat(10000);
+
+                    await new Promise(r => setTimeout(r, throttleMs));
+
+                    return new Promise(resolve => {
+                        requestIdleCallback(() => {
+                            let scriptEl = appEl.querySelector(`script[data-index="${i}"]`);
+                            
+                            if(!scriptEl) {
+                                scriptEl = document.createElement("script");
+                                scriptEl.setAttribute("data-index", i);
+
+                                appEl.appendChild(scriptEl);
+                            }
+
+                            scriptEl.innerHTML = html;
+
+                            resolve();
+                        });
+                    });
+                }
+
+                const hydrate = async (init = false) => {
+                    const hydrations = [];
+
+                    !init && window.__signalEvent("transition");
+
+                    for(let i = 0; i < 3; i++) {
+                        hydrations.push(
+                            hydrateComponent(i, Math.random() * 10)
+                        );
+                    }
+
+                    await Promise.all(hydrations);
+
+                    window.__signalEvent("stable");
+                }
+
+                hydrate(true);
+
+                setInterval(hydrate, 3000);
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Test</h1>
+        <div id="app"></div>
+    </body>
+</html>

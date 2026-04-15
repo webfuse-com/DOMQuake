@@ -95,12 +95,10 @@ await runBrowser(URL, async (THRESHOLD, DIST_APP_MODULE, TIMELINE_APP_URL) => {
 
     document.body.appendChild(iframeElement);
 
-    console.log(THRESHOLD);
     new DOMQuake({
         threshold: THRESHOLD
     }, true)
         .on("*", (event, detail) => {
-            console.log(event, detail.intensity)
             iframeElement.contentWindow.postMessage({
                 type: "dom-quake",
                 data: {

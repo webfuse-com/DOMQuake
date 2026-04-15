@@ -32,7 +32,7 @@ npm run demo -- [<URL> [<THRESHOLD>]]
 
 ```
 npm run demo
-npm run demo -- https://www.webfuse.com 0.7
+npm run demo -- https://www.webfuse.com 0.5
 ```
 
 ### A 2-State Machine & Event Emitter

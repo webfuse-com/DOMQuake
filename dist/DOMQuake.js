@@ -35,7 +35,8 @@
     maxDecayRampTicks: 40,
     maxDOMMeasureDepth: 32,
     maxHTMLDeltaDepthForSampling: 4,
-    maxHTMLDeltaLength: 5e4
+    maxHTMLDeltaLength: 5e4,
+    skipTagNames: ["SCRIPT", "NOSCRIPT", "TEMPLATE", "META"]
   };
   var MUTATION_WEIGHTS = {
     childList: 1,
@@ -91,6 +92,13 @@
       this.tickInterval = null;
       this.transitionTicks = CONSTRAINTS.maxDecayRampTicks;
     }
+    resolveTarget(node) {
+      let resolvedNode = node;
+      while (resolvedNode.nodeType !== Node.ELEMENT_NODE && resolvedNode.parentNode) {
+        resolvedNode = resolvedNode.parentNode;
+      }
+      return resolvedNode;
+    }
     computeStructuralFactor(node, depth) {
       const subtreeSize = this.subtreeSizes.get(node);
       if (subtreeSize === void 0) return 0;
@@ -99,11 +107,17 @@
       const depthFactor = 1 / Math.sqrt(normalizedDepth + 1);
       return subtreeFraction * depthFactor;
     }
+    filterSkippedNodes(nodes) {
+      return [...nodes].filter((node) => {
+        return node.nodeType === Node.ELEMENT_NODE && !CONSTRAINTS.skipTagNames.includes(node.tagName.toUpperCase());
+      });
+    }
     computeHTMLDeltaFactor(record, depth) {
-      if (depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) {
-        const nodeCount = record.addedNodes.length + record.removedNodes.length;
-        return Math.log2(nodeCount + 1) + 1;
-      }
+      const effectiveNodes = [
+        ...this.filterSkippedNodes(record.addedNodes),
+        ...this.filterSkippedNodes(record.removedNodes)
+      ];
+      if (depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) return Math.log2(effectiveNodes.length + 1) + 1;
       const affectedNodes = [
         ...Array.from(record.addedNodes),
         ...Array.from(record.removedNodes)
@@ -115,17 +129,11 @@
       }, 0);
       return Math.log2(totalHTMLDelta + 1) + 1;
     }
-    resolveTarget(node) {
-      let resolvedNode = node;
-      while (resolvedNode.nodeType !== Node.ELEMENT_NODE && resolvedNode.parentNode) {
-        resolvedNode = resolvedNode.parentNode;
-      }
-      return resolvedNode;
-    }
     computeWeight(record) {
       const typeFactor = MUTATION_WEIGHTS[record.type];
       if (typeFactor === void 0) return 0;
       const target = this.resolveTarget(record.target);
+      if (!this.filterSkippedNodes([target]).length) return 0;
       const depth = this.nodeDOMDepths.get(target) ?? this.measureNodeDepth(target);
       const structuralFactor = this.computeStructuralFactor(target, depth);
       if (structuralFactor === 0) return 0;
