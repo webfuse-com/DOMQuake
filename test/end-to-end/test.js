@@ -134,7 +134,7 @@ for(const reference of FILTERED_APPS) {
         async reference => {
             const EVENTS = [ "transition", "stable" ];
             const TIMEOUT_MS = 3500;
-            const STABLE_EPSILON_MS = 500;
+            const STABLE_EPSILON_MS = 600; // decayed intensity
             const TRANSITION_EPSILON_MS = 100;
             const INIT_DELAY_MS = 500;
 

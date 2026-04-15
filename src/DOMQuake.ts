@@ -24,15 +24,17 @@ interface MutationEvent {
 const CONSTRAINTS: {
     exitThreshold: number;
     intensityDecayFactor: number;
+    maxDecayRampTicks: number;
+    maxDOMMeasureDepth: number;
     maxHTMLDeltaDepthForSampling: number;
     maxHTMLDeltaLength: number;
-    maxDOMMeasureDepth: number;
 } = {
     exitThreshold: 0.02,
-    intensityDecayFactor: 0.1,
+    intensityDecayFactor: 0.25,
+    maxDecayRampTicks: 40,
+    maxDOMMeasureDepth: 32,
     maxHTMLDeltaDepthForSampling: 4,
-    maxHTMLDeltaLength: 50000,
-    maxDOMMeasureDepth: 32
+    maxHTMLDeltaLength: 50000
 };
 
 const MUTATION_WEIGHTS: {
@@ -68,6 +70,7 @@ export class DOMQuake extends EventEmitter<Event> {
     private hasStaleDOMMeasures!: boolean;
     private mutationObserver!: MutationObserver | null;
     private tickInterval!: ReturnType<typeof setInterval> | null;
+    private transitionTicks!: number;
 
     constructor(options: Partial<DOMQuakeOptions> = {}, emitOnTick: boolean = false) {
         super();
@@ -103,6 +106,7 @@ export class DOMQuake extends EventEmitter<Event> {
         this.hasStaleDOMMeasures = false;
         this.mutationObserver = null;
         this.tickInterval = null;
+        this.transitionTicks = CONSTRAINTS.maxDecayRampTicks;
     }
 
     private computeStructuralFactor(node: Node, depth: number): number {
@@ -288,9 +292,17 @@ export class DOMQuake extends EventEmitter<Event> {
         const intensity: number = this.computeWindowSum();
         const relativeIntensity: number = intensity / (this.domIntensity || 1);
 
-        this.decayedIntensity = (relativeIntensity <= this.decayedIntensity)
-            ? this.decayedIntensity * CONSTRAINTS.intensityDecayFactor
-            : relativeIntensity;
+        if(relativeIntensity > this.decayedIntensity) {
+            this.decayedIntensity = relativeIntensity;
+        } else {
+            const decayProgress: number = Math.min(
+                this.transitionTicks / CONSTRAINTS.maxDecayRampTicks,
+                1.0
+            );
+            const decayFactor: number = 1.0 - (decayProgress * (1.0 - CONSTRAINTS.intensityDecayFactor));
+
+            this.decayedIntensity *= decayFactor;
+        }
 
         const isAboveEntryThreshold: boolean = (relativeIntensity >= this.options.threshold);
         const isAboveExitThreshold: boolean = (this.decayedIntensity > CONSTRAINTS.exitThreshold);
@@ -298,7 +310,9 @@ export class DOMQuake extends EventEmitter<Event> {
         if(isAboveEntryThreshold && this.currentState !== "transition") {
             this.currentState = "transition";
 
-            this.emit(this.currentState, { intensity: relativeIntensity });
+            this.emit(this.currentState, {
+                intensity: relativeIntensity
+            });
 
         } else if(!isAboveExitThreshold && this.currentState !== "stable") {
             this.currentState = "stable";
@@ -307,10 +321,14 @@ export class DOMQuake extends EventEmitter<Event> {
             this.decayedIntensity = 0;
             this.hasStaleDOMMeasures = true;
 
-            this.emit(this.currentState, { intensity: relativeIntensity });
+            this.emit(this.currentState, {
+                intensity: relativeIntensity
+            });
 
         } else if(this.emitOnTick) {
-            this.emit("tick" as Event, { intensity: relativeIntensity });
+            this.emit("tick" as Event, {
+                intensity: relativeIntensity
+            });
         }
     }
 

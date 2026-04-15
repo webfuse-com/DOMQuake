@@ -13,7 +13,7 @@ new DOMQuake({
   threshold: 0.9  // (think of 90% UI change; default: 0.5)
 })
   .once("transition", ({ intensity }) => {
-    console.log("Intensity": intensity)
+    console.log("Intensity": intensity);
   })
   .observe();
 ```
