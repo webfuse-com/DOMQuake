@@ -1,25 +1,6 @@
-import { type Event } from "./types.ts";
+import { type Event, type MutationEvent, type MutationType, type DOMQuakeOptions } from "./types.ts";
 import { EventEmitter } from "./EventEmitter.js";
 
-
-type MutationType =
-    | "childList"
-    | "attributes"
-    | "characterData";
-
-
-interface DOMQuakeOptions {
-    root: Element;
-    threshold: number;
-    tickMs: number;
-    windowTicks: number;
-}
-
-interface MutationEvent {
-    target: Node;
-    timestamp: number;
-    weight: number;
-}
 
 const CONSTRAINTS: {
     exitThreshold: number;
@@ -28,15 +9,15 @@ const CONSTRAINTS: {
     maxDOMMeasureDepth: number;
     maxHTMLDeltaDepthForSampling: number;
     maxHTMLDeltaLength: number;
-    skipTagNames: string[];
+    skipTagNames: Set<string>;
 } = {
     exitThreshold: 0.02,
     intensityDecayFactor: 0.25,
-    maxDecayRampTicks: 40,
+    maxDecayRampTicks: 5,
     maxDOMMeasureDepth: 32,
     maxHTMLDeltaDepthForSampling: 4,
     maxHTMLDeltaLength: 50000,
-    skipTagNames: [ "SCRIPT", "NOSCRIPT", "TEMPLATE", "META" ]
+    skipTagNames: new Set([ "SCRIPT", "NOSCRIPT", "TEMPLATE", "META" ])
 };
 
 const MUTATION_WEIGHTS: {
@@ -50,7 +31,7 @@ const MUTATION_WEIGHTS: {
 };
 
 const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
-    threshold: 0.7,
+    threshold: 0.25,
     tickMs: 50,
     windowTicks: 6
 };
@@ -67,7 +48,7 @@ export class DOMQuake extends EventEmitter<Event> {
     private domIntensity!: number | null;
     private totalNodeCount!: number;
     private decayedIntensity!: number;
-    private mutationEvents!: MutationEvent[];
+    private mutationEventMap!: Map<Node, MutationEvent>;
     private pendingMutationRecords!: MutationRecord[];
     private hasStaleDOMMeasures!: boolean;
     private mutationObserver!: MutationObserver | null;
@@ -102,13 +83,22 @@ export class DOMQuake extends EventEmitter<Event> {
         this.domDepth = 0;
         this.totalNodeCount = 0;
         this.decayedIntensity = 0;
-        this.mutationEvents = [];
+        this.mutationEventMap = new Map();
         this.pendingMutationRecords = [];
         this.domIntensity = null;
         this.hasStaleDOMMeasures = false;
         this.mutationObserver = null;
         this.tickInterval = null;
         this.transitionTicks = CONSTRAINTS.maxDecayRampTicks;
+    }
+
+    private isSkipped(node: Node): boolean {
+        return node.nodeType === Node.ELEMENT_NODE
+            && CONSTRAINTS.skipTagNames.has((node as Element).tagName);
+    }
+
+    private filterSkippedNodes(nodes: NodeList | Node[]): Node[] {
+        return [ ...nodes ].filter(node => !this.isSkipped(node));
     }
 
     private resolveTarget(node: Node): Node {
@@ -133,28 +123,17 @@ export class DOMQuake extends EventEmitter<Event> {
         return subtreeFraction * depthFactor;
     }
 
-    private filterSkippedNodes(nodes: NodeList | Node[]): Node[] {
-        return [ ...nodes ]
-            .filter(node => {
-                return (node.nodeType === Node.ELEMENT_NODE)
-                    && !CONSTRAINTS.skipTagNames.includes((node as Element).tagName.toUpperCase());
-            });
-    }
-
     private computeHTMLDeltaFactor(record: MutationRecord, depth: number): number {
         const effectiveNodes: Node[] = [
             ...this.filterSkippedNodes(record.addedNodes),
             ...this.filterSkippedNodes(record.removedNodes)
         ];
 
-        if(depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) return Math.log2(effectiveNodes.length + 1) + 1;
+        if(depth > CONSTRAINTS.maxHTMLDeltaDepthForSampling) {
+            return Math.log2(effectiveNodes.length + 1) + 1;
+        }
 
-        const affectedNodes: Node[] = [
-            ...Array.from(record.addedNodes),
-            ...Array.from(record.removedNodes)
-        ];
-
-        const totalHTMLDelta: number = affectedNodes
+        const totalHTMLDelta: number = effectiveNodes
             .reduce((sum: number, node: Node) => {
                 const html: string = (node as Element).outerHTML ?? node.textContent ?? "";
                 const htmlSize: number = Math.min(html.length, CONSTRAINTS.maxHTMLDeltaLength);
@@ -172,7 +151,7 @@ export class DOMQuake extends EventEmitter<Event> {
 
         const target: Node = this.resolveTarget(record.target);
 
-        if(!this.filterSkippedNodes([ target ]).length) return 0;
+        if(this.isSkipped(target)) return 0;
 
         const depth: number = this.nodeDOMDepths.get(target) ?? this.measureNodeDepth(target);
         const structuralFactor: number = this.computeStructuralFactor(target, depth);
@@ -187,20 +166,21 @@ export class DOMQuake extends EventEmitter<Event> {
     private pruneStaleEvents(tNow: number): void {
         const cutoff: number = tNow - (this.options.windowTicks * this.options.tickMs);
 
-        let i: number = 0;
-
-        while((i < this.mutationEvents.length) && (this.mutationEvents[i].timestamp < cutoff)) {
-            i++;
-        }
-
-        if(i > 0) {
-            this.mutationEvents = this.mutationEvents.slice(i);
+        for(const [ target, event ] of this.mutationEventMap) {
+            if(event.timestamp < cutoff) {
+                this.mutationEventMap.delete(target);
+            }
         }
     }
 
     private computeWindowSum(): number {
-        return this.mutationEvents
-            .reduce((sum: number, event: MutationEvent) => sum + event.weight, 0);
+        let sum: number = 0;
+
+        for(const event of this.mutationEventMap.values()) {
+            sum += event.weight;
+        }
+
+        return sum;
     }
 
     private measureNodeDepth(node: Node): number {
@@ -239,6 +219,7 @@ export class DOMQuake extends EventEmitter<Event> {
         }
 
         this.domDepth = 0;
+        this.subtreeSizes = new WeakMap();
         this.nodeDOMDepths = new WeakMap();
 
         for(const node of nodes) {
@@ -270,29 +251,32 @@ export class DOMQuake extends EventEmitter<Event> {
         }
 
         const tNow: number = performance.now();
+        let hadSignificantMutation: boolean = false;
 
         for(const record of snapshot) {
             const weight: number = this.computeWeight(record);
 
             if(weight === 0) continue;
 
+            hadSignificantMutation = true;
+
             const target: Node = this.resolveTarget(record.target);
 
-            const existingIndex: number = this.mutationEvents
-                .findIndex(e => e.target === target);
+            const existing: MutationEvent | undefined = this.mutationEventMap.get(target);
 
-            if(existingIndex >= 0) {
-                this.mutationEvents[existingIndex].weight = Math.max(
-                    this.mutationEvents[existingIndex].weight,
-                    weight
-                );
+            if(existing !== undefined) {
+                existing.weight = Math.max(existing.weight, weight);
             } else {
-                this.mutationEvents.push({
+                this.mutationEventMap.set(target, {
                     target,
                     timestamp: tNow,
                     weight
                 });
             }
+        }
+
+        if(hadSignificantMutation) {
+            this.hasStaleDOMMeasures = true;
         }
     }
 
@@ -308,11 +292,14 @@ export class DOMQuake extends EventEmitter<Event> {
 
         if(relativeIntensity > this.decayedIntensity) {
             this.decayedIntensity = relativeIntensity;
+            this.transitionTicks = 0;
         } else {
-            const decayProgress: number = Math.min(
-                this.transitionTicks / CONSTRAINTS.maxDecayRampTicks,
-                1.0
+            this.transitionTicks = Math.min(
+                this.transitionTicks + 1,
+                CONSTRAINTS.maxDecayRampTicks
             );
+
+            const decayProgress: number = this.transitionTicks / CONSTRAINTS.maxDecayRampTicks;
             const decayFactor: number = 1.0 - (decayProgress * (1.0 - CONSTRAINTS.intensityDecayFactor));
 
             this.decayedIntensity *= decayFactor;
@@ -330,7 +317,7 @@ export class DOMQuake extends EventEmitter<Event> {
 
         } else if(!isAboveExitThreshold && this.currentState !== "stable") {
             this.currentState = "stable";
-            this.mutationEvents = [];
+            this.mutationEventMap = new Map();
             this.pendingMutationRecords = [];
             this.decayedIntensity = 0;
             this.hasStaleDOMMeasures = true;
@@ -353,7 +340,6 @@ export class DOMQuake extends EventEmitter<Event> {
 
         this.mutationObserver = new MutationObserver((records: MutationRecord[]) => {
             this.pendingMutationRecords.push(...records);
-            this.hasStaleDOMMeasures = true;
         });
 
         this.mutationObserver
