@@ -18,9 +18,7 @@ new DOMQuake({
   .observe();
 ```
 
-<a href="https://github.com/webfuse-com/DOMQuake">
-  <img src="./.github/demo.gif" alt="Demo" width="830">
-</a>
+<img src="./.github/demo.gif" alt="Demo" width="830">
 
 ### Integrate
 
@@ -50,6 +48,10 @@ npm run demo -- [<URL> [<THRESHOLD>]]
 npm run demo
 npm run demo -- https://www.webfuse.com 0.5
 ```
+
+### Example
+
+<img src="./.github/timeseries.png" alt="Example timeseries" width="830">
 
 ### A 2-State Machine & Event Emitter
 
