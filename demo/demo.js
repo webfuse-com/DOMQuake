@@ -5,8 +5,8 @@ import { createServer } from "http";
 import puppeteer from "puppeteer";
 
 
-const DEFAULT_THRESHOLD = 0.7;
-const DIST_APP_MODULE = (await readFile(join(import.meta.dirname, "../dist/DOMQuake.js"))).toString();
+const DEFAULT_THRESHOLD = 0.75;
+const DIST_APP_MODULE = (await readFile(join(import.meta.dirname, "../dist.browser/DOMQuake.js"))).toString();
 const DEMO_APP_URL = `file://${join(import.meta.dirname, "./app/app.html")}`;
 const TIMELINE_APP_PORT = 5000;
 const TIMELINE_APP_URL = `http://localhost:${TIMELINE_APP_PORT}/app.html`;
@@ -88,7 +88,7 @@ await runBrowser(URL, async (THRESHOLD, DIST_APP_MODULE, TIMELINE_APP_URL) => {
         box-sizing: border-box;
         border: none;
         outline: none;
-        z-index: 1000;
+        z-index: 1000000;
     `;
 
     document.documentElement.style.paddingBottom = `${TIMELINE_HEIGHT}px`; 

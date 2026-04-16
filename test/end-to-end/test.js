@@ -6,7 +6,7 @@ import puppeteer from "puppeteer";
 
 const INTEGRATION_MODULE_PATHS = [
     "./app.js",
-    "../../dist/DOMQuake.js"
+    "../../dist.browser/DOMQuake.js"
 ];
 
 const ARGUMENTS = process.argv.slice(2);
@@ -139,7 +139,7 @@ for(const reference of FILTERED_APPS) {
         async reference => {
             const EVENTS = [ "transition", "stable" ];
             const TIMEOUT_MS = 3500;
-            const STABLE_EPSILON_MS = 600; // decayed intensity
+            const STABLE_EPSILON_MS = 750; // mind decayed intensity
             const TRANSITION_EPSILON_MS = 100;
             const INIT_DELAY_MS = 500;
 

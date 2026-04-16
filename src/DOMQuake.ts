@@ -31,7 +31,7 @@ const MUTATION_WEIGHTS: {
 };
 
 const DEFAULT_OPTIONS: Omit<DOMQuakeOptions, "root"> = {
-    threshold: 0.25,
+    threshold: 0.75,
     tickMs: 50,
     windowTicks: 6
 };
