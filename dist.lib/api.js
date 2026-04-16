@@ -43,7 +43,7 @@ var MUTATION_WEIGHTS = {
   characterData: 0.1
 };
 var DEFAULT_OPTIONS = {
-  threshold: 0.25,
+  threshold: 0.75,
   tickMs: 50,
   windowTicks: 6
 };
