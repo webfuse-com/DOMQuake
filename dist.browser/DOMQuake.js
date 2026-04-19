@@ -1,3 +1,4 @@
+"use strict";
 (() => {
   // src/EventEmitter.ts
   var WILDCARD_EVENT_NAME = "*";
@@ -287,6 +288,6 @@
     }
   };
 
-  // src/api.ts
+  // src/api.browser.ts
   window.DOMQuake = DOMQuake;
 })();

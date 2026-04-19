@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "author": "Thassilo M. Schiepanski",
   "type": "module",
-  "main": "./dist.lib/api.js",
+  "main": "./dist.lib/api.lib.js",
+  "types": "./dist.lib/types/api.lib.d.ts",
   "scripts": {
     "prepare": "husky",
     "build:lib": "npx esbuild ./src/* --outdir=./dist.lib/ --bundle --platform=node --format=esm --target=es2022 --packages=external",
-    "build:browser": "npx esbuild ./src/api.ts --bundle --outfile=./dist.browser/DOMQuake.js",
+    "build:browser": "npx esbuild ./src/api.browser.ts --bundle --outfile=./dist.browser/DOMQuake.js",
     "build:browser:watch": "npm run build:api -- --watch",
-    "build": "npm run build:lib && npm run build:browser",
+    "build:types": "npx tsc",
+    "build": "npm run build:lib && npm run build:types && npm run build:browser",
     "test:unit": "node --experimental-strip-types ./test/unit/test.js",
     "test:end-to-end": "node ./test/end-to-end/test.js",
     "test": "npm run test:unit && npm run test:end-to-end",
@@ -26,6 +28,7 @@
   "devDependencies": {
     "esbuild": "^0.27.2",
     "husky": "^9.1.7",
-    "puppeteer": "^24.40.0"
+    "puppeteer": "^24.40.0",
+    "typescript": "^6.0.3"
   }
 }
