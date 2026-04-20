@@ -1,34 +1,5 @@
-// src/EventEmitter.ts
-var WILDCARD_EVENT_NAME = "*";
-var EventEmitter = class {
-  listeners = {
-    on: /* @__PURE__ */ new Map(),
-    once: /* @__PURE__ */ new Map()
-  };
-  getListeners(listenerMap, event) {
-    !listenerMap.has(event) && listenerMap.set(event, []);
-    return listenerMap.get(event);
-  }
-  on(event, listener) {
-    this.getListeners(this.listeners.on, event).push(listener);
-    return this;
-  }
-  once(event, listener) {
-    this.getListeners(this.listeners.once, event).push(listener);
-    return this;
-  }
-  emit(event, arg) {
-    this.getListeners(this.listeners.once, event).forEach((listener) => listener(arg));
-    this.getListeners(this.listeners.once, WILDCARD_EVENT_NAME).forEach((listener) => listener(event, arg));
-    this.getListeners(this.listeners.on, event).forEach((listener) => listener(arg));
-    this.getListeners(this.listeners.on, WILDCARD_EVENT_NAME).forEach((listener) => listener(event, arg));
-    this.listeners.once.set(event, []);
-    this.listeners.once.set(WILDCARD_EVENT_NAME, []);
-  }
-};
-
-// src/DOMQuake.ts
-var CONSTRAINTS = {
+import { EventEmitter } from "./EventEmitter.js";
+const CONSTRAINTS = {
   exitThreshold: 0.02,
   intensityDecayFactor: 0.25,
   maxDecayRampTicks: 5,
@@ -37,17 +8,17 @@ var CONSTRAINTS = {
   maxHTMLDeltaLength: 5e4,
   skipTagNames: /* @__PURE__ */ new Set(["SCRIPT", "NOSCRIPT", "TEMPLATE", "META"])
 };
-var MUTATION_WEIGHTS = {
+const MUTATION_WEIGHTS = {
   childList: 1,
   attributes: 0.4,
   characterData: 0.1
 };
-var DEFAULT_OPTIONS = {
+const DEFAULT_OPTIONS = {
   threshold: 0.75,
   tickMs: 50,
   windowTicks: 6
 };
-var DOMQuake = class extends EventEmitter {
+class DOMQuake extends EventEmitter {
   options;
   emitOnTick;
   subtreeSizes;
@@ -67,7 +38,7 @@ var DOMQuake = class extends EventEmitter {
     super();
     const optionsWithDefaults = {
       ...DEFAULT_OPTIONS,
-      root: window.document.documentElement,
+      root: options.root ?? window.document.documentElement,
       ...options
     };
     this.options = optionsWithDefaults;
@@ -284,7 +255,7 @@ var DOMQuake = class extends EventEmitter {
     this.reset();
     return this;
   }
-};
+}
 export {
   DOMQuake
 };

@@ -7,7 +7,7 @@
   "types": "./dist.lib/types/api.lib.d.ts",
   "scripts": {
     "prepare": "husky",
-    "build:lib": "npx esbuild ./src/* --outdir=./dist.lib/ --bundle --platform=node --format=esm --target=es2022 --packages=external",
+    "build:lib": "npx esbuild ./src/* --outdir=./dist.lib/ --platform=node --format=esm --target=es2022 --packages=external",
     "build:browser": "npx esbuild ./src/api.browser.ts --bundle --outfile=./dist.browser/DOMQuake.js",
     "build:browser:watch": "npm run build:api -- --watch",
     "build:types": "npx tsc",

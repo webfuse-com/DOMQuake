@@ -1,6 +1,5 @@
-// src/EventEmitter.ts
-var WILDCARD_EVENT_NAME = "*";
-var EventEmitter = class {
+const WILDCARD_EVENT_NAME = "*";
+class EventEmitter {
   listeners = {
     on: /* @__PURE__ */ new Map(),
     once: /* @__PURE__ */ new Map()
@@ -25,7 +24,7 @@ var EventEmitter = class {
     this.listeners.once.set(event, []);
     this.listeners.once.set(WILDCARD_EVENT_NAME, []);
   }
-};
+}
 export {
   EventEmitter
 };

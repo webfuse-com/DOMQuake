@@ -61,7 +61,7 @@ export class DOMQuake extends EventEmitter<Event> {
         const optionsWithDefaults: DOMQuakeOptions = {
             ...DEFAULT_OPTIONS,
 
-            root: window.document.documentElement,
+            root: options.root ?? window.document.documentElement,
 
             ...options
         };

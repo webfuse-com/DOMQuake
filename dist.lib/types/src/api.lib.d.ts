@@ -1,1 +1,0 @@
-export { DOMQuake } from "./DOMQuake.js";

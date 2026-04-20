@@ -69,7 +69,7 @@
       super();
       const optionsWithDefaults = {
         ...DEFAULT_OPTIONS,
-        root: window.document.documentElement,
+        root: options.root ?? window.document.documentElement,
         ...options
       };
       this.options = optionsWithDefaults;
