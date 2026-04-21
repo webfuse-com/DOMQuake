@@ -1,4 +1,4 @@
-import { type Event, type MutationEvent, type MutationType, type DOMQuakeOptions } from "./types.ts";
+import { type Event, type MutationEvent, type MutationType, type DOMQuakeOptions, EventArgument } from "./types.ts";
 import { EventEmitter } from "./EventEmitter.js";
 
 
@@ -311,7 +311,7 @@ export class DOMQuake extends EventEmitter<Event> {
         if(isAboveEntryThreshold && this.currentState !== "transition") {
             this.currentState = "transition";
 
-            this.emit(this.currentState, {
+            this.emit<EventArgument>(this.currentState, {
                 intensity: relativeIntensity
             });
 
@@ -322,12 +322,12 @@ export class DOMQuake extends EventEmitter<Event> {
             this.decayedIntensity = 0;
             this.hasStaleDOMMeasures = true;
 
-            this.emit(this.currentState, {
+            this.emit<EventArgument>(this.currentState, {
                 intensity: relativeIntensity
             });
 
         } else if(this.emitOnTick) {
-            this.emit("tick" as Event, {
+            this.emit<EventArgument>("tick" as Event, {
                 intensity: relativeIntensity
             });
         }

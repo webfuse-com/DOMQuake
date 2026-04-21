@@ -14,10 +14,14 @@ eventEmitter.once("foo", (arg) => resultCollection.push([ "foo", "once", arg ]))
 
 eventEmitter.emit("foo", 1);
 
-eventEmitter.on("*", (event, arg) => resultCollection.push([ "*", event, "on", arg ]));
+const onWildcardHandler = (event, arg) => resultCollection.push([ "*", event, "on", arg ]);
+
+eventEmitter.on("*", onWildcardHandler);
 eventEmitter.once("*", (event, arg) => resultCollection.push([ "*", event, "once", arg ]));
 
 eventEmitter.emit("foo", 2);
+
+eventEmitter.off("*", onWildcardHandler);
 
 eventEmitter.emit("bar", 3);
 
@@ -29,8 +33,7 @@ assertEqual(
         [ '*', 'foo', 'once', 2 ],
         [ 'foo', 'on', 2 ],
         [ '*', 'foo', 'on', 2 ],
-        [ 'bar', 'on', 3 ],
-        [ '*', 'bar', 'on', 3 ]
+        [ 'bar', 'on', 3 ]
     ]),
     "Incorrect result collection"
 );

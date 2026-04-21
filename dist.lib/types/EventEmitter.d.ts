@@ -1,4 +1,3 @@
-import { type EventArgument } from "./types.ts";
 declare const WILDCARD_EVENT_NAME: "*";
 type Event<T> = T | typeof WILDCARD_EVENT_NAME;
 type ListenerCb = (...args: unknown[]) => void;
@@ -7,6 +6,7 @@ export declare class EventEmitter<T> {
     private getListeners;
     on(event: Event<T>, listener: ListenerCb): this;
     once(event: Event<T>, listener: ListenerCb): this;
-    emit<A = EventArgument>(event: T, arg: A): void;
+    off(event: Event<T>, listener: ListenerCb): this;
+    emit<A>(event: T, arg: A): void;
 }
 export {};
