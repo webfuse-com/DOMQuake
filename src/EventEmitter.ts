@@ -44,7 +44,7 @@ export class EventEmitter<T> {
         return this;
     }
 
-    public emit<A>(event: T, arg: A) {
+    public emit<A = unknown>(event: T, arg?: A) {
         [ ...this.getListeners(this.listeners.once, event) ]
             .forEach((listener: ListenerCb) => listener(arg));
         [ ...this.getListeners(this.listeners.once, WILDCARD_EVENT_NAME) ]

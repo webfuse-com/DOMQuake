@@ -7,6 +7,6 @@ export declare class EventEmitter<T> {
     on(event: Event<T>, listener: ListenerCb): this;
     once(event: Event<T>, listener: ListenerCb): this;
     off(event: Event<T>, listener: ListenerCb): this;
-    emit<A>(event: T, arg: A): void;
+    emit<A = unknown>(event: T, arg?: A): void;
 }
 export {};
