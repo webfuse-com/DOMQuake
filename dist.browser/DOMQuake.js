@@ -64,7 +64,6 @@
     emitOnTick;
     subtreeSizes;
     nodeDOMDepths;
-    currentState;
     domDepth;
     domIntensity;
     totalNodeCount;
@@ -76,6 +75,7 @@
     tickInterval;
     transitionTicks;
     isObserving = false;
+    state;
     constructor(options = {}, emitOnTick = false) {
       super();
       const optionsWithDefaults = {
@@ -92,7 +92,7 @@
       clearInterval(this.tickInterval ?? void 0);
       this.subtreeSizes = /* @__PURE__ */ new WeakMap();
       this.nodeDOMDepths = /* @__PURE__ */ new WeakMap();
-      this.currentState = "transition";
+      this.state = "transition";
       this.domDepth = 0;
       this.totalNodeCount = 0;
       this.decayedIntensity = 0;
@@ -256,18 +256,18 @@
       }
       const isAboveEntryThreshold = relativeIntensity >= this.options.threshold;
       const isAboveExitThreshold = this.decayedIntensity > CONSTRAINTS.exitThreshold;
-      if (isAboveEntryThreshold && this.currentState !== "transition") {
-        this.currentState = "transition";
-        this.emit(this.currentState, {
+      if (isAboveEntryThreshold && this.state !== "transition") {
+        this.state = "transition";
+        this.emit(this.state, {
           intensity: relativeIntensity
         });
-      } else if (!isAboveExitThreshold && this.currentState !== "stable") {
-        this.currentState = "stable";
+      } else if (!isAboveExitThreshold && this.state !== "stable") {
+        this.state = "stable";
         this.mutationEventMap = /* @__PURE__ */ new Map();
         this.pendingMutationRecords = [];
         this.decayedIntensity = 0;
         this.hasStaleDOMMeasures = true;
-        this.emit(this.currentState, {
+        this.emit(this.state, {
           intensity: relativeIntensity
         });
       } else if (this.emitOnTick) {

@@ -45,7 +45,6 @@ export class DOMQuake extends EventEmitter<Event> {
 
 	private subtreeSizes!: WeakMap<Node, number>;
 	private nodeDOMDepths!: WeakMap<Node, number>;
-	private currentState!: Event;
 	private domDepth!: number;
 	private domIntensity!: number | null;
 	private totalNodeCount!: number;
@@ -58,6 +57,7 @@ export class DOMQuake extends EventEmitter<Event> {
 	private transitionTicks!: number;
 
 	public isObserving: boolean = false;
+	public state!: Event;
 
 	constructor(options: Partial<DOMQuakeOptions> = {}, emitOnTick: boolean = false) {
 		super();
@@ -83,7 +83,7 @@ export class DOMQuake extends EventEmitter<Event> {
 
 		this.subtreeSizes = new WeakMap();
 		this.nodeDOMDepths = new WeakMap();
-		this.currentState = "transition";
+		this.state = "transition";
 		this.domDepth = 0;
 		this.totalNodeCount = 0;
 		this.decayedIntensity = 0;
@@ -312,21 +312,21 @@ export class DOMQuake extends EventEmitter<Event> {
 		const isAboveEntryThreshold: boolean = (relativeIntensity >= this.options.threshold);
 		const isAboveExitThreshold: boolean = (this.decayedIntensity > CONSTRAINTS.exitThreshold);
 
-		if(isAboveEntryThreshold && this.currentState !== "transition") {
-			this.currentState = "transition";
+		if(isAboveEntryThreshold && this.state !== "transition") {
+			this.state = "transition";
 
-			this.emit<EventArgument>(this.currentState, {
+			this.emit<EventArgument>(this.state, {
 				intensity: relativeIntensity
 			});
 
-		} else if(!isAboveExitThreshold && this.currentState !== "stable") {
-			this.currentState = "stable";
+		} else if(!isAboveExitThreshold && this.state !== "stable") {
+			this.state = "stable";
 			this.mutationEventMap = new Map();
 			this.pendingMutationRecords = [];
 			this.decayedIntensity = 0;
 			this.hasStaleDOMMeasures = true;
 
-			this.emit<EventArgument>(this.currentState, {
+			this.emit<EventArgument>(this.state, {
 				intensity: relativeIntensity
 			});
 

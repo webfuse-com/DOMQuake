@@ -19,7 +19,8 @@ new DOMQuake({
   })
   .observe();
 
-// Check if an instance is active via `.isObserving`.
+// .state
+// .isObserving
 ```
 
 ### Integrate
