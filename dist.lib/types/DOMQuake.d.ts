@@ -16,6 +16,7 @@ export declare class DOMQuake extends EventEmitter<Event> {
     private mutationObserver;
     private tickInterval;
     private transitionTicks;
+    isObserving: boolean;
     constructor(options?: Partial<DOMQuakeOptions>, emitOnTick?: boolean);
     private reset;
     private isSkipped;

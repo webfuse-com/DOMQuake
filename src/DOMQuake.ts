@@ -17,7 +17,9 @@ const CONSTRAINTS: {
     maxDOMMeasureDepth: 32,
     maxHTMLDeltaDepthForSampling: 4,
     maxHTMLDeltaLength: 50000,
-    skipTagNames: new Set([ "SCRIPT", "NOSCRIPT", "TEMPLATE", "META" ])
+    skipTagNames: new Set([
+        "SCRIPT", "NOSCRIPT", "TEMPLATE", "META"
+    ])
 };
 
 const MUTATION_WEIGHTS: {
@@ -54,6 +56,8 @@ export class DOMQuake extends EventEmitter<Event> {
     private mutationObserver!: MutationObserver | null;
     private tickInterval!: ReturnType<typeof setInterval> | null;
     private transitionTicks!: number;
+
+    public isObserving: boolean = false;
 
     constructor(options: Partial<DOMQuakeOptions> = {}, emitOnTick: boolean = false) {
         super();
@@ -334,6 +338,8 @@ export class DOMQuake extends EventEmitter<Event> {
     }
 
     public observe(): this {
+        this.isObserving = true;
+
         this.measureDOM();
 
         this.decayedIntensity = 1.0;
@@ -359,6 +365,8 @@ export class DOMQuake extends EventEmitter<Event> {
 
     public disconnect(): this {
         if(!this.mutationObserver) return this;
+
+        this.isObserving = false;
 
         this.reset();
 

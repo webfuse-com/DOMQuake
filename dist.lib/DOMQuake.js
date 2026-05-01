@@ -6,7 +6,12 @@ const CONSTRAINTS = {
   maxDOMMeasureDepth: 32,
   maxHTMLDeltaDepthForSampling: 4,
   maxHTMLDeltaLength: 5e4,
-  skipTagNames: /* @__PURE__ */ new Set(["SCRIPT", "NOSCRIPT", "TEMPLATE", "META"])
+  skipTagNames: /* @__PURE__ */ new Set([
+    "SCRIPT",
+    "NOSCRIPT",
+    "TEMPLATE",
+    "META"
+  ])
 };
 const MUTATION_WEIGHTS = {
   childList: 1,
@@ -34,6 +39,7 @@ class DOMQuake extends EventEmitter {
   mutationObserver;
   tickInterval;
   transitionTicks;
+  isObserving = false;
   constructor(options = {}, emitOnTick = false) {
     super();
     const optionsWithDefaults = {
@@ -235,6 +241,7 @@ class DOMQuake extends EventEmitter {
     }
   }
   observe() {
+    this.isObserving = true;
     this.measureDOM();
     this.decayedIntensity = 1;
     this.mutationObserver = new MutationObserver((records) => {
@@ -252,6 +259,7 @@ class DOMQuake extends EventEmitter {
   }
   disconnect() {
     if (!this.mutationObserver) return this;
+    this.isObserving = false;
     this.reset();
     return this;
   }

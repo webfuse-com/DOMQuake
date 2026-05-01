@@ -42,7 +42,12 @@
     maxDOMMeasureDepth: 32,
     maxHTMLDeltaDepthForSampling: 4,
     maxHTMLDeltaLength: 5e4,
-    skipTagNames: /* @__PURE__ */ new Set(["SCRIPT", "NOSCRIPT", "TEMPLATE", "META"])
+    skipTagNames: /* @__PURE__ */ new Set([
+      "SCRIPT",
+      "NOSCRIPT",
+      "TEMPLATE",
+      "META"
+    ])
   };
   var MUTATION_WEIGHTS = {
     childList: 1,
@@ -70,6 +75,7 @@
     mutationObserver;
     tickInterval;
     transitionTicks;
+    isObserving = false;
     constructor(options = {}, emitOnTick = false) {
       super();
       const optionsWithDefaults = {
@@ -271,6 +277,7 @@
       }
     }
     observe() {
+      this.isObserving = true;
       this.measureDOM();
       this.decayedIntensity = 1;
       this.mutationObserver = new MutationObserver((records) => {
@@ -288,6 +295,7 @@
     }
     disconnect() {
       if (!this.mutationObserver) return this;
+      this.isObserving = false;
       this.reset();
       return this;
     }

@@ -2,6 +2,8 @@
 
 Observe UI state on any web page.
 
+<img src="./.github/demo.gif" alt="Demo" width="830">
+
 ``` js
 new DOMQuake()
   .on("transition", pauseAgentCalls)
@@ -16,9 +18,9 @@ new DOMQuake({
     console.log("Intensity": intensity);
   })
   .observe();
-```
 
-<img src="./.github/demo.gif" alt="Demo" width="830">
+// Check if an instance is active via `.isObserving`.
+```
 
 ### Integrate
 
