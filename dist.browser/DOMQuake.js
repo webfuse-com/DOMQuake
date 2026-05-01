@@ -277,6 +277,7 @@
       }
     }
     observe() {
+      this.isObserving && this.disconnect();
       this.isObserving = true;
       this.measureDOM();
       this.decayedIntensity = 1;

@@ -338,6 +338,8 @@ export class DOMQuake extends EventEmitter<Event> {
 	}
 
 	public observe(): this {
+		this.isObserving && this.disconnect();
+
 		this.isObserving = true;
 
 		this.measureDOM();
