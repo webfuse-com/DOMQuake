@@ -9,7 +9,7 @@
     "prepare": "husky",
     "build:lib": "npx esbuild ./src/* --outdir=./dist.lib/ --platform=node --format=esm --target=es2022 --packages=external",
     "build:browser": "npx esbuild ./src/api.browser.ts --bundle --outfile=./dist.browser/DOMQuake.js",
-    "build:browser:watch": "npm run build:api -- --watch",
+    "build:browser:watch": "npm run build:browser -- --watch",
     "build:types": "npx tsc",
     "build": "npm run build:lib && npm run build:types && npm run build:browser",
     "lint": "npx eslint ./src/*",

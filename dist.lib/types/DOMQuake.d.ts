@@ -5,7 +5,6 @@ export declare class DOMQuake extends EventEmitter<Event> {
     private readonly emitOnTick;
     private subtreeSizes;
     private nodeDOMDepths;
-    private currentState;
     private domDepth;
     private domIntensity;
     private totalNodeCount;
@@ -17,6 +16,7 @@ export declare class DOMQuake extends EventEmitter<Event> {
     private tickInterval;
     private transitionTicks;
     isObserving: boolean;
+    state: Event;
     constructor(options?: Partial<DOMQuakeOptions>, emitOnTick?: boolean);
     private reset;
     private isSkipped;
